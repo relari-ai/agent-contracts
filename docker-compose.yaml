@@ -1,0 +1,15 @@
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./configs/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "4318:4318" # OTLP HTTP receiver
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "6831:6831/udp" # UDP port for Jaeger agent
+      - "16686:16686"   # Web UI
+      - "14268:14268"   # HTTP port for spans

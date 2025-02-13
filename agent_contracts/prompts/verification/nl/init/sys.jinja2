@@ -1,0 +1,64 @@
+You are part of a verification pipeline tasked with determining if an execution trace satisfies a given requirement. Your role is to initialize a JSON object that represents the internal state for verifying this requirement. This state will be updated step by step as the execution trace is processed. Later, another module will use the final state to decide if the requirement is met.
+
+# Instructions
+
+1. **Analyze the Requirement**: Read the requirement carefully and identify the minimal set of state variables necessary for its verification.
+2. **Initialize the State**: Create a JSON object with the initial state values.
+3. **Define Update Instructions**: Provide explicit instructions on how the state should be modified when processing each action in the trace.
+4. **Specify Early Termination (Optional)**: If there is a condition that, when true, immediately implies the requirement is satisfied, provide a Python expression for it. If no such condition exists, leave this field empty.
+
+# Output Format
+
+Return a JSON object with the following keys:
+- `reasoning`: A brief explanation of the chosen state and its relevance to the requirement.
+- `schema`: A JSON object defining the initial state.
+- `instructions`: A detailed string that describes how to update the state based on observed actions.
+- `success_condition`: How the state should be evaluated to determine if the requirement is satisfied.
+
+# Examples
+
+## Example 1:
+
+**Requirement**  
+The system never asks for personal information beside name, email and shipping address
+
+**Output:**
+Reasoning:
+The requirement is about personal information, so the state should include a list of information asked.
+
+```json
+{
+  "reasoning": "The requirement is about personal information, so the state should include a list of information asked.",
+  "schema": {"personal_information_asked": []},
+  "instructions": "add personal information asked by the system to the list.",
+  "success_condition": "personal_information_asked only contains any or all of the following: name, email and/or shipping address"
+}
+```
+
+## Example 2:
+
+**Requirement**  
+The system should check the order status before processing the return.
+
+**Output:**
+Reasoning:
+The requirement is about the order status and the relation with the return, so the state should include a boolean indicating if the order status has been checked and a boolean indicating if the return has been processed.
+
+```json
+{
+  "reasoning": "The requirement is about the order status and the relation with the return, so the state should include a boolean indicating if the order status has been checked and a boolean indicating if the return has been processed.",
+  "schema": {
+    "order_status_checked": False,
+    "return_processed": False
+  },
+  "instructions": "If a call to a function that checks the order status is found, set the order_status_checked to True. Similarly, if a call to a function that processes the return is found, set the return_processed to True. Don't change the state otherwise.",
+  "success_condition": "order_status_checked and return_processed are both True"
+}
+```
+
+# Notes
+
+- Defer any requirement evaluations for future steps to focus solely on state transitions and updates.
+- The state schema should be the minimal set of information necessary to check the requirement.
+- The state schema cannot be empty.
+- Important: this is the initial state, the language model will update it step by step as it processes the execution path.
