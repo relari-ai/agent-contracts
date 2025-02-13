@@ -1,6 +1,7 @@
 import json_repair
 from typing import Dict, Any
 
+
 def attribute_value(attribute: Dict[str, Any]):
     if "value" not in attribute:
         return attribute
@@ -27,9 +28,9 @@ def attribute_value(attribute: Dict[str, Any]):
             elif type_val == "bool":
                 return bool(value)
     return value
-def get_attribute_value(
-    trace: dict, key: str, default:Any=None
-) -> str | None:
+
+
+def get_attribute_value(trace: dict, key: str, default: Any = None) -> str | None:
     tag = find_attribute(trace, key)
     return attribute_value(tag) if tag else default
 
@@ -51,6 +52,7 @@ def find_attribute(trace: dict, key: str) -> str | None:
         if tag["key"] == key:
             return tag
     return None
+
 
 def recreate_attributes_hierarchy(items):
     root = {}

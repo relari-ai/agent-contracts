@@ -6,7 +6,7 @@ from agent_contracts.core.datatypes.verification.requirement import (
 )
 from .nl.nl_requirement_checker import NLRequirementChecker
 from typing import Tuple
-import random
+
 
 class RequirementChecker:
     @staticmethod

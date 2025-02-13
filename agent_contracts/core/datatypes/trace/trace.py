@@ -77,10 +77,16 @@ class Trace:
                 span["resource"]["attributes"],
                 key="openinference.project.name",
             )
-            info.run_id = get_attribute_value(span["resource"]["attributes"], key="eval.run.id")
-            info.dataset_id = get_attribute_value(span["attributes"],key="eval.dataset.id" )
+            info.run_id = get_attribute_value(
+                span["resource"]["attributes"], key="eval.run.id"
+            )
+            info.dataset_id = get_attribute_value(
+                span["attributes"], key="eval.dataset.id"
+            )
             info.uuid = get_attribute_value(span["attributes"], key="eval.uuid")
-            framework = Framework.from_name(get_attribute_value(span['attributes'], key="otel.scope.name" ))
+            framework = Framework.from_name(
+                get_attribute_value(span["attributes"], key="otel.scope.name")
+            )
             if framework != Framework.UNKNOWN:
                 info.framework = framework
             if info.is_complete:

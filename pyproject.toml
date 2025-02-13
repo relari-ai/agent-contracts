@@ -32,3 +32,10 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 cli = "agent_contracts.__main__:cli"
+
+[tool.ruff]
+ignore = ["E501"] # Avoid enforcing line-length violations (`E501`)
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["E402"]
+"**/{tests,docs,tools}/*" = ["E402"]

@@ -51,21 +51,42 @@ async def verify_trace(trace_id, dataset_path, output):
         results[contract.uuid] = await checker.check(exec_path, contract)
     if output:
         with open(output, "w") as f:
-            json.dump(results, f)
+            json.dump(
+                {
+                    "trace_id": trace_id,
+                    "dataset_id": dataset.uuid,
+                    "contracts": {
+                        contract.uuid: {
+                            "status": results[contract.uuid][0].name,
+                            "requirements": results[contract.uuid][1],
+                        }
+                        for contract in scenario.contracts
+                    },
+                },
+                f,
+            )
     console = Console()
     for contract in scenario.contracts:
         cstatus, cresults = results[contract.uuid]
         contract_table = Table(title=f"{contract.name} ({cstatus.name})")
         contract_table.add_column("Type", justify="left", style="cyan", no_wrap=True)
-        contract_table.add_column("Qualifier", justify="left", style="cyan", no_wrap=True)
-        contract_table.add_column("Requirement", justify="left", style="cyan", no_wrap=False)
+        contract_table.add_column(
+            "Qualifier", justify="left", style="cyan", no_wrap=True
+        )
+        contract_table.add_column(
+            "Requirement", justify="left", style="cyan", no_wrap=False
+        )
         contract_table.add_column("Satisfied", justify="left", no_wrap=True)
         for qreq in contract:
             contract_table.add_row(
                 qreq.section.value.upper(),
                 qreq.qualifier.value.upper(),
                 qreq.requirement.name,
-                "[green]Yes[/green]" if cresults[qreq.requirement.uuid] else "[red]No[/red]",
+                (
+                    "[green]Yes[/green]"
+                    if cresults[qreq.requirement.uuid]
+                    else "[red]No[/red]"
+                ),
             )
         console.print(contract_table)
 
@@ -77,7 +98,6 @@ async def verify_trace(trace_id, dataset_path, output):
 async def verify_run(run_id, dataset_path):
     """Verify a run with the given DATASET_PATH."""
     click.echo(f"Verifying run {run_id} with dataset at {dataset_path}")
-    dataset = Dataset.load(dataset_path)
     # traces = await jaeger.run_ids(run_id)
     # for trace in traces:
     #     await verify_trace(trace.trace_id, dataset_path)

@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from agent_contracts.core.datatypes.trace import Trace
 from .frameworks import parse_trace
 
+
 class Action(BaseModel):
     span_id: str = Field(
         ..., alias="spanId", description="A unique identifier for the action"

@@ -44,7 +44,7 @@ class PromptTemplate:
             msgs.append({"role": "system", "content": sys})
         msgs.append({"role": "user", "content": usr})
         return msgs
-    
+
     @classmethod
     def from_file(
         cls,

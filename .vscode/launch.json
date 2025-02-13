@@ -20,7 +20,9 @@
       "args": [
         "verify-trace",
         "79b662e7f3054b5e82b9f8fd3581f2c4",
-        "/Users/antonap/relari/agent-templates/apps/langgraph-fin-agent/dataset.json"
+        "/Users/antonap/relari/agent-templates/apps/langgraph-fin-agent/dataset.json",
+        "--output",
+        "79b662e.json"
       ]
     }
   ]

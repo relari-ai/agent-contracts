@@ -5,7 +5,11 @@ import json_repair as json
 from openai import AsyncOpenAI
 from pydantic import BaseModel
 
-from agent_contracts.core.datatypes.verification.exec_path import Action, ExecutionPath, State
+from agent_contracts.core.datatypes.verification.exec_path import (
+    Action,
+    ExecutionPath,
+    State,
+)
 from agent_contracts.core.datatypes.verification.requirement import NLRequirement
 from agent_contracts.core.prompts.provider import PromptProvider
 
@@ -13,6 +17,7 @@ from .exec_path_utils import exec_path_to_str_compact
 import logging
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class StepResult:
