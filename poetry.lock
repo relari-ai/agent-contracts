@@ -206,22 +206,6 @@ tests = ["cloudpickle", "hypothesis", "mypy (>=1.11.1)", "pympler", "pytest (>=4
 tests-mypy = ["mypy (>=1.11.1)", "pytest-mypy-plugins"]
 
 [[package]]
-name = "baml-py"
-version = "0.75.0"
-description = "BAML python bindings (pyproject.toml)"
-optional = false
-python-versions = "*"
-files = [
-    {file = "baml_py-0.75.0-cp38-abi3-macosx_10_12_x86_64.whl", hash = "sha256:55ce9b5cba1b2a70830d858c10171581a64a6d24c62c9303cad60331bb2a7841"},
-    {file = "baml_py-0.75.0-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:12603f8621b2dbb7bb7147366e4c72c4f14f55d4b434dfb0edf1c249e128a4c4"},
-    {file = "baml_py-0.75.0-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a112409e6aa6816cf2ac11672278d6bdba7f06057ec145aa634ec77cc4d396fe"},
-    {file = "baml_py-0.75.0-cp38-abi3-manylinux_2_24_aarch64.whl", hash = "sha256:13098cf0136007b19f8a109258f7f57c5a49e5b50317c48c6805c6b1818ea7d6"},
-    {file = "baml_py-0.75.0-cp38-abi3-musllinux_1_1_aarch64.whl", hash = "sha256:4d278e2dff1e36e615d9d0a3a948d5188c2197d34b09fac42895656ae6986a1c"},
-    {file = "baml_py-0.75.0-cp38-abi3-musllinux_1_1_x86_64.whl", hash = "sha256:40186fe26946c7c2a298c4631b5d7f6a129fc4b6abcb7c2365930be599e90401"},
-    {file = "baml_py-0.75.0-cp38-abi3-win_amd64.whl", hash = "sha256:67faf033d0805c31862644817d5630f74e20978fff2df44aefaed8a01ac4755d"},
-]
-
-[[package]]
 name = "certifi"
 version = "2025.1.31"
 description = "Python package for providing Mozilla's CA Bundle."
@@ -1548,4 +1532,4 @@ propcache = ">=0.2.0"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "905dd974c67fb210a05ea6a784c09d21311ee8f3e71266b22b160d24ab1c6b1e"
+content-hash = "82a4f50ba32462408e9c28fde953102cd6370dd19f05b0c0ba0b59df3f88df54"

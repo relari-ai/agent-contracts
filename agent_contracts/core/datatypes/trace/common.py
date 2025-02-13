@@ -2,7 +2,10 @@ from enum import Enum
 from typing import Optional
 from anytree.node.nodemixin import NodeMixin
 from openinference.semconv.trace import SpanAttributes
-from agent_contracts.core.utils.trace_attributes import get_attribute_value,recreate_attributes_hierarchy
+from agent_contracts.core.utils.trace_attributes import (
+    get_attribute_value,
+    recreate_attributes_hierarchy,
+)
 
 
 class Framework(Enum):
@@ -11,7 +14,7 @@ class Framework(Enum):
     UNKNOWN = "unknown"
 
     @classmethod
-    def from_name(cls, name: Optional[str]=None):
+    def from_name(cls, name: Optional[str] = None):
         if name is None:
             return cls.UNKNOWN
         if "crewai" in name:
@@ -20,6 +23,7 @@ class Framework(Enum):
             return cls.LANGCHAIN
         else:
             return cls.UNKNOWN
+
 
 class Span(NodeMixin):
     def __init__(

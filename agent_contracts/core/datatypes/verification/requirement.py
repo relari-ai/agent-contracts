@@ -8,7 +8,7 @@ class DeterministicRequirement(BaseModel):
     uuid: Optional[str] = None
     variant: str
     args: Dict[str, Any]
-    
+
     @property
     def name(self):
         return self.variant
@@ -16,7 +16,7 @@ class DeterministicRequirement(BaseModel):
     def model_post_init(self, __context: Any):
         if not self.uuid:
             self.uuid = str(uuid4())
-    
+
     def model_dump(self):
         return {"type": "deterministic", **super().model_dump()}
 
