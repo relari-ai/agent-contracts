@@ -12,3 +12,17 @@ class TraceInfo(BaseModel):
     scenario_id: Optional[str] = None
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
+
+    class Config:
+        frozen = True
+
+
+class RunIdInfo(BaseModel):
+    run_id: str
+    project_name: Optional[str] = None
+    dataset_id: Optional[str] = None
+    start_time: datetime
+    end_time: datetime
+
+    class Config:
+        frozen = True
