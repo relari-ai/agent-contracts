@@ -34,6 +34,12 @@ class Scenario(BaseModel):
                 string_repr = str(name).encode() if name else os.urandom(64)
         return hashlib.blake2b(string_repr, digest_size=4).hexdigest()
 
+    def get_contract(self, uuid: str):
+        for contract in self.contracts:
+            if contract.uuid == uuid:
+                return contract
+        raise KeyError(f"UUID {uuid} not found in scenario")
+
 
 class Dataset(BaseModel):
     uuid: str

@@ -2,7 +2,7 @@ import aiohttp
 from datetime import datetime, timezone
 from agent_contracts.core.utils.trace_attributes import get_attribute_value
 from agent_contracts.core.datatypes.trace import Trace
-from .base import TraceInfo
+from .base import TraceInfo, RunIdInfo
 
 
 def _preprocess_spans(trace: dict):
@@ -101,7 +101,10 @@ class JaegerClient:
                         raise RuntimeError(f"API Error: {data.get('error')}")
                     data = data.get("result", data)
         except Exception as e:
-            raise RuntimeError("Failed to search traces from Jaeger") from e
+            if e.status == 404:
+                return {"resourceSpans": []}
+            else:
+                raise RuntimeError("Failed to search traces from Jaeger") from e
         return self._get_trace_info(data["resourceSpans"])
 
     async def trace(self, trace_id):
@@ -134,8 +137,21 @@ class Jaeger:
         self.client = JaegerClient(base_url, timeout)
         self.service = service
 
-    async def search(self, start: datetime, end: datetime):
+    async def search(
+        self,
+        start: datetime,
+        end: datetime,
+        run_id: str = None,
+        dataset_id: str = None,
+        project_name: str = None,
+    ):
         traces = await self.client.search(self.service, start, end)
+        if run_id:
+            traces = [trace for trace in traces if trace.run_id == run_id]
+        if dataset_id:
+            traces = [trace for trace in traces if trace.dataset_id == dataset_id]
+        if project_name:
+            traces = [trace for trace in traces if trace.project_name == project_name]
         return traces
 
     async def trace(self, trace_id: str):
@@ -144,8 +160,22 @@ class Jaeger:
 
     async def run_ids(self, start: datetime, end: datetime):
         traces = await self.search(start, end)
-        run_ids = {
-            get_attribute_value(trace["resource"], key="eval.run.id")
-            for trace in traces["resourceSpans"]
-        } - {None}
-        return list(run_ids)
+        aggregated = {}
+        for trace in traces:
+            run_id = trace.run_id
+            if run_id not in aggregated:
+                aggregated[run_id] = {
+                    "run_id": run_id,
+                    "project_name": trace.project_name,
+                    "dataset_id": trace.dataset_id,
+                    "start_time": trace.start_time,
+                    "end_time": trace.end_time,
+                }
+            else:
+                aggregated[run_id]["start_time"] = min(
+                    aggregated[run_id]["start_time"], trace.start_time
+                )
+                aggregated[run_id]["end_time"] = max(
+                    aggregated[run_id]["end_time"], trace.end_time
+                )
+        return [RunIdInfo(**data) for data in aggregated.values()]
