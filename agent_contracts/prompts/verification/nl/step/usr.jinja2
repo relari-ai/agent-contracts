@@ -3,7 +3,7 @@ Requirement:
 
 Schema:
 ```json
-{{ schema }}
+{{ schema | tojson() }}
 ```
 
 Schema update instructions:
@@ -14,7 +14,7 @@ Schema update instructions:
 State name: {{ state.name }}
 Current action:
 ```json
-{{ action }}
+{{ action | tojson() }}
 ```
 
 Updated Schema:

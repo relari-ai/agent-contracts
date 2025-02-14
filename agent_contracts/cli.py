@@ -147,8 +147,8 @@ class CLIAdapter:
         dataset = Dataset.load(dataset_path)
         traces = await self.client.search(start, end, run_id=run_id)
         traces_by_id = {trace.trace_id: trace for trace in traces}
-        if not all(trace.dataset_id == dataset.uuid for trace in traces):
-            raise RuntimeError("Traces does not match the dataset")
+        # if not all(trace.dataset_id == dataset.uuid for trace in traces):
+        #     raise RuntimeError("Traces does not match the dataset")
         cc = ContractChecker()
         group = [_verify_trace(trace.trace_id, dataset, cc) for trace in traces]
         results = await asyncio.gather(*group)

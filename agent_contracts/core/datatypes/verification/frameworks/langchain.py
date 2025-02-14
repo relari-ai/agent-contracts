@@ -1,5 +1,7 @@
 from typing import Any, Dict, List
 
+from anytree import PreOrderIter
+
 from agent_contracts.core.datatypes.trace import Trace
 
 IGNORED_NODES = [
@@ -16,51 +18,44 @@ IGNORED_NODES = [
     "Prompt",
 ]
 
+AGENT_NODE = "agent"
 
-def should_include_node(node) -> bool:
+
+def should_include(node) -> bool:
     return node.name not in IGNORED_NODES
 
 
-def get_all_leaves(span):
-    """Recursively collect all leaf nodes in a span's subtree."""
-    leaves = []
-    for descendant in span.descendants:
-        if not should_include_node(descendant):
-            continue
-        if not descendant.children:  # is leaf
-            leaves.append(  # action
-                {
-                    "spanId": descendant.span_id,
-                    "name": descendant.name,
-                    "info": descendant.attributes,
-                }
-            )
-    return leaves
+def _item(span, actions=None):
+    obj = {
+        "spanId": span.span_id,
+        "name": span.name,
+        "info": span.attributes,
+    }
+    if actions:
+        obj["actions"] = actions
+    return obj
+
+
+def is_descendant(span, state_ids):
+    return any(x.span_id in state_ids for x in span.path)
 
 
 def exec_path_from_trace(trace: Trace) -> List[Dict[str, Any]]:
-    root = trace.root
-    if not root:
+    if not trace.root:
         raise ValueError("No root span found!")
     states = []
-    # Count LangGraph nodes first
-    langgraph_nodes = [node for node in root.children if node.name == "LangGraph"]
-    add_turn_numbers = len(langgraph_nodes) > 1
-    # Process each LangGraph node
-    for turn_num, node in enumerate(langgraph_nodes, 1):
-        # Get states from children of LangGraph nodes
-        for state_span in node.children:
-            if not should_include_node(state_span):
+    state_ids = set()
+    for span in PreOrderIter(trace.root):
+        # consider only agent spans
+        if span.kind.lower() == AGENT_NODE:
+            # Check if this is a descendant of a state already in the exec path
+            if is_descendant(span, state_ids):
+                # TODO: this might not be always the correct behavior
                 continue
-            state_name = state_span.name
-            if add_turn_numbers:
-                state_name = f"{state_name} (turn {turn_num})"
-            state = {
-                "spanId": state_span.span_id,
-                "name": state_name,
-                "info": state_span.attributes,
-                "actions": get_all_leaves(state_span),
-            }
-            if state["actions"]:  # Only include states that have actions
-                states.append(state)
+            # collect actions from the leaves of the span
+            actions = [_item(leaf) for leaf in span.leaves if should_include(leaf)]
+            if actions:
+                # add the state to the exec path
+                states.append(_item(span, actions))
+                state_ids.add(span.span_id)
     return states

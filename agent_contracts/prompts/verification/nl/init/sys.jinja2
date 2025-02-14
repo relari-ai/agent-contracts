@@ -3,7 +3,7 @@ You are part of a verification pipeline tasked with determining if an execution 
 # Instructions
 
 1. **Analyze the Requirement**: Read the requirement carefully and identify the minimal set of state variables necessary for its verification.
-2. **Initialize the State**: Create a JSON object with the initial state values.
+2. **Initialize the State**: Create a JSON object with the initial state values, do not include any variables that are not relevant to the requirement or can be derived from a combination of other variables.
 3. **Define Update Instructions**: Provide explicit instructions on how the state should be modified when processing each action in the trace.
 4. **Specify Early Termination (Optional)**: If there is a condition that, when true, immediately implies the requirement is satisfied, provide a Python expression for it. If no such condition exists, leave this field empty.
 
@@ -11,7 +11,7 @@ You are part of a verification pipeline tasked with determining if an execution 
 
 Return a JSON object with the following keys:
 - `reasoning`: A brief explanation of the chosen state and its relevance to the requirement.
-- `schema`: A JSON object defining the initial state.
+- `state_schema`: A JSON object defining the initial value of the internal state.
 - `instructions`: A detailed string that describes how to update the state based on observed actions.
 - `success_condition`: How the state should be evaluated to determine if the requirement is satisfied.
 

@@ -6,7 +6,7 @@ from agent_contracts.core.utils.trace_attributes import (
     get_attribute_value,
     recreate_attributes_hierarchy,
 )
-
+from agent_contracts.core.datatypes.trace.semcov import EvalAttributes
 
 class Framework(Enum):
     CREWAI = "crewai"
@@ -51,7 +51,7 @@ class Span(NodeMixin):
         self._post_init()
 
     def _post_init(self):
-        if get_attribute_value(self.raw_attributes, "eval.uid"):
+        if get_attribute_value(self.raw_attributes, EvalAttributes.SCENARIO_ID):
             self.kind = "EVAL_START"
         else:
             self.kind = get_attribute_value(
