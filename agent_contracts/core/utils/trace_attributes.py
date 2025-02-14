@@ -59,8 +59,12 @@ def recreate_attributes_hierarchy(items):
     for entry in items:
         path_str = entry["key"]
         value = entry["value"]
+        try:
+            parsed_value = json_repair.loads(value)
+        except Exception:
+            parsed_value = None
         path = [int(p) if p.isdigit() else p for p in path_str.split(".")]
-        insert_into(root, path, value)
+        insert_into(root, path, parsed_value or value)
     return root
 
 

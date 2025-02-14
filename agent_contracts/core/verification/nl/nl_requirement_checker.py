@@ -63,7 +63,8 @@ class NLRequirementChecker:
     async def init(self, exec_path: ExecutionPath, requirement: NLRequirement) -> None:
         prompt = PromptProvider.get_prompt("verification/nl/init")
         msgs = prompt.render(
-            exec_path=exec_path_to_str_compact(exec_path), requirement=requirement
+            exec_path=exec_path_to_str_compact(exec_path),
+            requirement=requirement.requirement,
         )
         valid = False
         while not valid:
@@ -82,8 +83,8 @@ class NLRequirementChecker:
             else:
                 logger.debug("Invalid schema, retrying...")
         self.schema = parsed_schema
-        self.instructions = _schema.instructions
-        self.success_condition = _schema.success_condition
+        self.instructions = _schema.instructions.strip()
+        self.success_condition = _schema.success_condition.strip()
 
     async def step(self, state: State, action: Action) -> None:
         if not self.schema or not self.instructions:
@@ -92,10 +93,10 @@ class NLRequirementChecker:
         prompt = PromptProvider.get_prompt("verification/nl/step")
         msgs = prompt.render(
             state=state,
-            requirement=self.requirement,
+            requirement=self.requirement.requirement,
             instructions=self.instructions,
-            schema=json_dump(ctx, indent=2),
-            action=json_dump(action.model_dump(), indent=2),
+            schema=ctx,
+            action=action.model_dump(),
         )
         valid = False
         while not valid:
@@ -122,9 +123,9 @@ class NLRequirementChecker:
     async def verify(self) -> bool:
         prompt = PromptProvider.get_prompt("verification/nl/verify")
         msgs = prompt.render(
-            requirement=self.requirement,
+            requirement=self.requirement.requirement,
             instructions=self.instructions,
-            results=self.updates[-1].result,
+            updates=self.updates,
             success_condition=self.success_condition,
         )
         response = await self.client.beta.chat.completions.parse(

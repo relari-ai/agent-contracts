@@ -1,13 +1,16 @@
 Requirement:
 {{ requirement.requirement }}
 
-Update rules:
-{{ instructions }}
+Update rules: "{{ instructions }}"
 
-Internal state after processing the execution trace:
+Internal state history:
 ---
-{{ results }}
+{% for update in updates -%}
+```json
+{{ update.result | tojson() }}
+```
+Update reason: "{{ update.reasoning }}"
 ---
+{% endfor %}
 
-Success condition state:
-{{ success_condition }}
+Success condition state: "{{ success_condition }}"

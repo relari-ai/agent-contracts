@@ -5,7 +5,7 @@ from anytree.exporter import DictExporter
 from pydantic import BaseModel
 
 from agent_contracts.core.utils.trace_attributes import get_attribute_value
-
+from agent_contracts.core.datatypes.trace.semcov import EvalAttributes, OpeninferenceInstrumentators
 from .common import Framework, Span
 
 
@@ -75,15 +75,17 @@ class Trace:
         for span in self._raw_trace:
             info.project_name = get_attribute_value(
                 span["resource"]["attributes"],
-                key="openinference.project.name",
+                key=EvalAttributes.PROJECT_NAME,
             )
             info.run_id = get_attribute_value(
-                span["resource"]["attributes"], key="eval.run.id"
+                span["resource"]["attributes"], key=EvalAttributes.RUN_ID
             )
             info.dataset_id = get_attribute_value(
-                span["attributes"], key="eval.dataset.id"
+                span["attributes"], key=EvalAttributes.DATASET_ID
             )
-            info.uuid = get_attribute_value(span["attributes"], key="eval.uuid")
+            info.uuid = get_attribute_value(
+                span["attributes"], key=EvalAttributes.SCENARIO_ID
+            )
             framework = Framework.from_name(
                 get_attribute_value(span["attributes"], key="otel.scope.name")
             )
@@ -95,10 +97,10 @@ class Trace:
         for span in self._raw_trace:
             if "scope" in span:
                 scope = span["scope"]
-                if scope["name"] == "openinference.instrumentation.crewai":
+                if scope["name"] == OpeninferenceInstrumentators.CREWAI:
                     info.framework = Framework.CREWAI
                     break
-                elif scope["name"] == "openinference.instrumentation.langchain":
+                elif scope["name"] == OpeninferenceInstrumentators.LANGCHAIN:
                     info.framework = Framework.LANGCHAIN
                     break
         # Find duration

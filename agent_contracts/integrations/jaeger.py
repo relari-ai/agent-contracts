@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from agent_contracts.core.utils.trace_attributes import get_attribute_value
 from agent_contracts.core.datatypes.trace import Trace
 from .base import TraceInfo, RunIdInfo
-
+from agent_contracts.core.datatypes.trace.semcov import EvalAttributes
 
 def _preprocess_spans(trace: dict):
     spans = []
@@ -47,18 +47,18 @@ class JaegerClient:
         trace_infos = []
         for trace_data in traces:
             run_id = get_attribute_value(
-                trace_data["resource"]["attributes"], key="eval.run.id"
+                trace_data["resource"]["attributes"], key=EvalAttributes.RUN_ID
             )
             dataset_id = get_attribute_value(
                 trace_data["scopeSpans"][1]["spans"][0]["attributes"],
-                key="eval.dataset.id",
+                key=EvalAttributes.DATASET_ID,
             )
             scenario_id = get_attribute_value(
                 trace_data["scopeSpans"][1]["spans"][0]["attributes"],
-                key="eval.uuid",
+                key=EvalAttributes.SCENARIO_ID,
             )
             project_name = get_attribute_value(
-                trace_data["resource"]["attributes"], key="openinference.project.name"
+                trace_data["resource"]["attributes"], key=EvalAttributes.PROJECT_NAME
             )
             trace_id = trace_data["scopeSpans"][1]["spans"][0]["traceId"]
             start_time = trace_data["scopeSpans"][1]["spans"][0]["startTimeUnixNano"]
