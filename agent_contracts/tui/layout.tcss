@@ -1,0 +1,18 @@
+Screen {
+    layout: horizontal;
+}
+Tree {
+    layout: horizontal;
+}
+
+.exec_path {
+     height: 100%;
+    width: 1fr;
+    border: solid green;
+}
+
+.info {
+    height: 100%;
+    width: 2fr;
+    border: solid green;
+}

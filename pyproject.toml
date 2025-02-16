@@ -20,6 +20,8 @@ openai = "^1.61.1"
 tqdm = "^4.67.1"
 rich = "^13.9.4"
 click = "^8.1.8"
+textual = "^1.0.0"
+textual-dev = "^1.7.0"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -32,6 +34,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 cli = "agent_contracts.__main__:cli"
+tui = "agent_contracts.tui.tui:main"
 
 [tool.ruff]
 ignore = ["E501"] # Avoid enforcing line-length violations (`E501`)

@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field, field_serializer, field_validator
 
-from agent_contracts.core.datatypes.verification.requirement import (
+from agent_contracts.core.datatypes.dataset.requirement import (
     DeterministicRequirement,
     NLRequirement,
 )
