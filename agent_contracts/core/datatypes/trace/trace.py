@@ -5,8 +5,13 @@ from anytree.exporter import DictExporter
 from pydantic import BaseModel
 
 from agent_contracts.core.utils.trace_attributes import get_attribute_value
-from agent_contracts.core.datatypes.trace.semcov import EvalAttributes, OpeninferenceInstrumentators
+from agent_contracts.core.datatypes.trace.semcov import (
+    EvalAttributes,
+    OpeninferenceInstrumentators,
+)
 from .common import Framework, Span
+from random import choices
+from string import hexdigits
 
 
 class TraceExporter(DictExporter):
@@ -46,6 +51,31 @@ class Trace:
         self.trace: List[Span] = self._build(trace)
         self.info: TraceInfo = self._analyze()
         self.metadata = kwargs
+        self.root = self._find_root()
+
+    def _find_root(self):
+        # Find all root spans
+        roots = [node for node in self.trace if node.is_root]
+        if len(roots) > 1:
+            start = min(root.start_time for root in roots)
+            end = max(root.end_time for root in roots)
+            new_root = Span(
+                span_id=self._generate_span_id(),
+                name="root",
+                kind="ROOT",
+                attributes={},
+                start_time=start,
+                end_time=end,
+                children=roots,
+            )
+            for root in roots:
+                root.parent = new_root
+            return new_root
+        return roots[0]
+
+    @staticmethod
+    def _generate_span_id():
+        return "".join(choices(hexdigits.lower(), k=16))
 
     def _build(self, trace_data):
         # Sort by startTime and extract spans
@@ -110,11 +140,6 @@ class Trace:
         info.duration = (end_time - start_time) / 1e9
         info.framework = info.framework or Framework.UNKNOWN
         return info
-
-    @property
-    def root(self):
-        # Return the first root node (assuming a single trace root)
-        return self.trace[0]
 
     def get_span_by_id(self, span_id: str):
         try:

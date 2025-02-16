@@ -82,7 +82,7 @@ class Span(NodeMixin):
         Returns:
             The simplified attribute value or a processed dictionary.
         """
-        if not isinstance(attribute, dict):
+        if not attribute or not isinstance(attribute, dict):
             return attribute
         if set(attribute.keys()) == {"value", "mime_type"}:
             return attribute["value"]

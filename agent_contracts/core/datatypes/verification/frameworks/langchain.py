@@ -1,6 +1,6 @@
 from typing import Any, Dict, List
 
-from anytree import PreOrderIter
+from anytree import LevelOrderIter
 
 from agent_contracts.core.datatypes.trace import Trace
 
@@ -8,17 +8,17 @@ IGNORED_NODES = [
     "__start__",
     "__end__",
     "_write",
-    "RunnableSequence",
     "ChatPromptTemplate",
-    "PydanticToolsParser",
     "StateModifier",
     "call_model",
     "Unnamed",
     "should_continue",
     "Prompt",
+    "LangGraph",
+    "RunnableLambda",
 ]
 
-AGENT_NODE = "agent"
+ROOT_NODES = ["root", "eval-start"]
 
 
 def should_include(node) -> bool:
@@ -41,21 +41,17 @@ def is_descendant(span, state_ids):
 
 
 def exec_path_from_trace(trace: Trace) -> List[Dict[str, Any]]:
-    if not trace.root:
-        raise ValueError("No root span found!")
+    # First find all top-level nodes (states)
+    state_nodes, state_ids = [], set()
+    for span in LevelOrderIter(trace.root, filter_=should_include):
+        if span.name in ROOT_NODES or is_descendant(span, state_ids):
+            continue
+        state_nodes.append(span)
+        state_ids.add(span.span_id)
+    # Then find all actions for each state
     states = []
-    state_ids = set()
-    for span in PreOrderIter(trace.root):
-        # consider only agent spans
-        if span.kind.lower() == AGENT_NODE:
-            # Check if this is a descendant of a state already in the exec path
-            if is_descendant(span, state_ids):
-                # TODO: this might not be always the correct behavior
-                continue
-            # collect actions from the leaves of the span
-            actions = [_item(leaf) for leaf in span.leaves if should_include(leaf)]
-            if actions:
-                # add the state to the exec path
-                states.append(_item(span, actions))
-                state_ids.add(span.span_id)
+    for span in state_nodes:
+        actions = [_item(leaf) for leaf in span.leaves if should_include(leaf)]
+        if actions:
+            states.append(_item(span, actions))
     return states

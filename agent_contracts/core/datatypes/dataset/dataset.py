@@ -82,7 +82,7 @@ class Dataset(BaseModel):
     def save(self, path: str):
         path = Path(path)
         if path.suffix == ".json":
-            with open("dataset.json", "w") as f:
+            with open(path, "w") as f:
                 json.dump(self.model_dump(exclude_defaults=True), f)
         else:
             raise ValueError(f"Unsupported file extension: {path.suffix}")

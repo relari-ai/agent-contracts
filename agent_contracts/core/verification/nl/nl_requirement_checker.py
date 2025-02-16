@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from json import dumps as json_dump
-
+from typing import Any
 import json_repair as json
 from openai import AsyncOpenAI
 from pydantic import BaseModel
@@ -10,13 +10,38 @@ from agent_contracts.core.datatypes.verification.exec_path import (
     ExecutionPath,
     State,
 )
-from agent_contracts.core.datatypes.verification.requirement import NLRequirement
+from agent_contracts.core.datatypes.dataset.requirement import NLRequirement
 from agent_contracts.core.prompts.provider import PromptProvider
 
 from .exec_path_utils import exec_path_to_str_compact
 import logging
 
 logger = logging.getLogger(__name__)
+
+def redact_info(info: Any):
+    if isinstance(info, dict):
+        # Remove sensitive keys
+        for key in ["otel", "span", "token_usage"]:
+            info.pop(key, None)
+        
+        # If the dict has exactly the keys {"lc", "type", "id", "kwargs"}, 
+        # then unwrap it by redacting and returning its "kwargs" value.
+        if set(info.keys()) == {"lc", "type", "id", "kwargs"}:
+            return redact_info(info["kwargs"])
+        
+        # Recursively update each value in the dictionary.
+        for k, v in info.items():
+            info[k] = redact_info(v)
+        return info
+
+    elif isinstance(info, list):
+        return [redact_info(item) for item in info]
+
+    elif isinstance(info, str):
+        if info.startswith("data:image"):
+            return "__REDACTED__"
+    return info
+
 
 
 @dataclass
@@ -91,13 +116,24 @@ class NLRequirementChecker:
             raise RuntimeError("You have to call init first")
         ctx = self.updates[-1].result if self.updates else self.schema
         prompt = PromptProvider.get_prompt("verification/nl/step")
+        action_dump = action.model_dump()
+        x = json_dump(action_dump["info"])
+        action_dump["info"] = redact_info(action_dump["info"])
+        y = json_dump(action_dump["info"])
+        delta = len(x) - len(y)
+        print(delta)
         msgs = prompt.render(
             state=state,
             requirement=self.requirement.requirement,
             instructions=self.instructions,
             schema=ctx,
-            action=action.model_dump(),
+            action=action_dump,
         )
+        tokens = int(sum(len(msg["content"]) for msg in msgs) / 4.2)
+        if tokens > 120000:
+            raise RuntimeError("Too many tokens")
+        # with open("usr_msg.txt", "w") as f:
+        #     f.write(msgs[-1]["content"])
         valid = False
         while not valid:
             response = await self.client.beta.chat.completions.parse(

@@ -1,6 +1,6 @@
 from agent_contracts.core.datatypes.verification.exec_path import ExecutionPath
 from agent_contracts.core.datatypes.dataset.contract import QualifiedRequirement
-from agent_contracts.core.datatypes.verification.requirement import (
+from agent_contracts.core.datatypes.dataset.requirement import (
     DeterministicRequirement,
     NLRequirement,
 )

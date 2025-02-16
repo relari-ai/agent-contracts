@@ -36,6 +36,8 @@ def get_attribute_value(trace: dict, key: str, default: Any = None) -> str | Non
 
 
 def find_attribute(trace: dict, key: str) -> str | None:
+    if not trace:
+        return None
     try:
         _tags = trace["attributes"]
     except (KeyError, TypeError):
