@@ -117,11 +117,7 @@ class NLRequirementChecker:
         ctx = self.updates[-1].result if self.updates else self.schema
         prompt = PromptProvider.get_prompt("verification/nl/step")
         action_dump = action.model_dump()
-        x = json_dump(action_dump["info"])
         action_dump["info"] = redact_info(action_dump["info"])
-        y = json_dump(action_dump["info"])
-        delta = len(x) - len(y)
-        print(delta)
         msgs = prompt.render(
             state=state,
             requirement=self.requirement.requirement,
