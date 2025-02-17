@@ -7,6 +7,7 @@ from tqdm import tqdm
 from agent_contracts.core.datatypes.dataset.contract import (
     Contract,
     QualifiedRequirement,
+    Qualifier,
     Section,
 )
 from agent_contracts.core.datatypes.verification.exec_path import ExecutionPath
@@ -45,13 +46,10 @@ class ContractChecker:
         # Is it satisfied?
         satisfied = True
         for req_uuid, result in req_results.items():
-            qualified_req = contract[req_uuid]
-            section = qualified_req.section
-            qualifier = qualified_req.qualifier
-            if "should" in qualifier.value:
+            req = contract[req_uuid]
+            if req.qualifier == Qualifier.SHOULD:
                 continue
-            adj_val = qualifier.apply(result.satisfied)
-            if section == Section.PRECONDITION and not adj_val:
+            if  req.section == Section.PRECONDITION and not result.satisfied:
                 return ContractStatus.INVALID, req_results
-            satisfied = satisfied and adj_val
+            satisfied = satisfied and result.satisfied
         return ContractStatus(satisfied), req_results

@@ -2,9 +2,9 @@ RELARI_TRACER = "relari-otel"
 
 
 class EvalAttributes:
-    DATASET_ID = "eval.dataset.id"
     RUN_ID = "eval.run.id"
-    SCENARIO_ID = "eval.uuid"
+    DATASET_ID = "eval.dataset.id"
+    SCENARIO_ID = "eval.scenario.id"
     PROJECT_NAME = "openinference.project.name"
 
 class OpeninferenceInstrumentators:

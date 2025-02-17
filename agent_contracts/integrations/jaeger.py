@@ -1,9 +1,13 @@
-import aiohttp
 from datetime import datetime, timezone
-from agent_contracts.core.utils.trace_attributes import get_attribute_value
+
+import aiohttp
+
 from agent_contracts.core.datatypes.trace import Trace
-from .base import TraceInfo, RunIdInfo
 from agent_contracts.core.datatypes.trace.semcov import EvalAttributes
+from agent_contracts.core.utils.trace_attributes import get_attribute_value
+
+from .base import RunIdInfo, TraceInfo
+
 
 def _preprocess_spans(trace: dict):
     spans = []
@@ -49,20 +53,35 @@ class JaegerClient:
             run_id = get_attribute_value(
                 trace_data["resource"]["attributes"], key=EvalAttributes.RUN_ID
             )
-            dataset_id = get_attribute_value(
-                trace_data["scopeSpans"][1]["spans"][0]["attributes"],
-                key=EvalAttributes.DATASET_ID,
-            )
-            scenario_id = get_attribute_value(
-                trace_data["scopeSpans"][1]["spans"][0]["attributes"],
-                key=EvalAttributes.SCENARIO_ID,
-            )
             project_name = get_attribute_value(
                 trace_data["resource"]["attributes"], key=EvalAttributes.PROJECT_NAME
             )
-            trace_id = trace_data["scopeSpans"][1]["spans"][0]["traceId"]
-            start_time = trace_data["scopeSpans"][1]["spans"][0]["startTimeUnixNano"]
-            end_time = trace_data["scopeSpans"][1]["spans"][0]["endTimeUnixNano"]
+            trace_id = None
+            start_time = None
+            end_time = None
+            dataset_id = None
+            scenario_id = None
+            for scope in trace_data["scopeSpans"]:
+                if "spans" not in scope:
+                    continue
+                for span in scope["spans"]:
+                    trace_id = span["traceId"]
+                    dataset_id = get_attribute_value(
+                        span["attributes"], key=EvalAttributes.DATASET_ID
+                    )
+                    scenario_id = get_attribute_value(
+                        span["attributes"], key=EvalAttributes.SCENARIO_ID
+                    )
+                    _start_time = datetime.fromtimestamp(
+                        int(span["startTimeUnixNano"]) / 1e9
+                    )
+                    _end_time = datetime.fromtimestamp(
+                        int(span["endTimeUnixNano"]) / 1e9
+                    )
+                    if start_time is None or _start_time < start_time:
+                        start_time = _start_time
+                    if end_time is None or _end_time > end_time:
+                        end_time = _end_time
             trace_infos.append(
                 TraceInfo(
                     trace_id=trace_id,
@@ -70,8 +89,8 @@ class JaegerClient:
                     run_id=run_id,
                     dataset_id=dataset_id,
                     scenario_id=scenario_id,
-                    start_time=datetime.fromtimestamp(int(start_time) / 1e9),
-                    end_time=datetime.fromtimestamp(int(end_time) / 1e9),
+                    start_time=start_time,
+                    end_time=start_time,
                 )
             )
         return trace_infos

@@ -22,17 +22,8 @@ class Section(Enum):
 
 class Qualifier(Enum):
     MUST = "must"
-    MUST_NOT = "must_not"
     SHOULD = "should"
-    SHOULD_NOT = "should_not"
 
-    def apply(self, bool_value: bool) -> bool:
-        if self in [Qualifier.MUST, Qualifier.SHOULD]:
-            return bool_value
-        elif self in [Qualifier.MUST_NOT, Qualifier.SHOULD_NOT]:
-            return not bool_value
-        else:
-            raise ValueError(f"Invalid qualifier: {self}")
 
 
 @dataclass
@@ -45,9 +36,7 @@ class QualifiedRequirement:
 # https://www.ietf.org/rfc/rfc2119.txt
 class Requirements(BaseModel):
     must: List[RequirementType] = Field(default_factory=list)
-    must_not: List[RequirementType] = Field(default_factory=list)
     should: List[RequirementType] = Field(default_factory=list)
-    should_not: List[RequirementType] = Field(default_factory=list)
 
     class Config:
         arbitrary_types_allowed = True
@@ -55,20 +44,14 @@ class Requirements(BaseModel):
     def __len__(self):
         return (
             len(self.must)
-            + len(self.must_not)
             + len(self.should)
-            + len(self.should_not)
         )
 
     def __iter__(self) -> Generator[RequirementType, None, None]:
         for req in self.must:
             yield QualifiedRequirement(req, Qualifier.MUST)
-        for req in self.must_not:
-            yield QualifiedRequirement(req, Qualifier.MUST_NOT)
         for req in self.should:
             yield QualifiedRequirement(req, Qualifier.SHOULD)
-        for req in self.should_not:
-            yield QualifiedRequirement(req, Qualifier.SHOULD_NOT)
 
     @field_validator("*", mode="before")
     def convert_none_to_list(cls, value):
@@ -76,7 +59,7 @@ class Requirements(BaseModel):
             return []
         return value
 
-    @field_validator("must", "must_not", "should", "should_not", mode="before")
+    @field_validator("must","should",  mode="before")
     def parse_requirements(cls, values):
         new_list = []
         for value in values:
@@ -92,7 +75,7 @@ class Requirements(BaseModel):
                 new_list.append(value)
         return new_list
 
-    @field_serializer("must", "must_not", "should", "should_not")
+    @field_serializer("must", "should")
     def serialize_requirements(self, requirements: List[RequirementType], field: str):
         return [req.model_dump() for req in requirements]
 
@@ -123,30 +106,18 @@ class Contract(BaseModel):
         # Preconditions
         for req in self.preconditions.must:
             yield QualifiedRequirement(req, Qualifier.MUST, Section.PRECONDITION)
-        for req in self.preconditions.must_not:
-            yield QualifiedRequirement(req, Qualifier.MUST_NOT, Section.PRECONDITION)
         for req in self.preconditions.should:
             yield QualifiedRequirement(req, Qualifier.SHOULD, Section.PRECONDITION)
-        for req in self.preconditions.should_not:
-            yield QualifiedRequirement(req, Qualifier.SHOULD_NOT, Section.PRECONDITION)
         # Postconditions
         for req in self.postconditions.must:
             yield QualifiedRequirement(req, Qualifier.MUST, Section.POSTCONDITION)
-        for req in self.postconditions.must_not:
-            yield QualifiedRequirement(req, Qualifier.MUST_NOT, Section.POSTCONDITION)
         for req in self.postconditions.should:
             yield QualifiedRequirement(req, Qualifier.SHOULD, Section.POSTCONDITION)
-        for req in self.postconditions.should_not:
-            yield QualifiedRequirement(req, Qualifier.SHOULD_NOT, Section.POSTCONDITION)
         # Pathconditions
         for req in self.pathconditions.must:
             yield QualifiedRequirement(req, Qualifier.MUST, Section.PATHCONDITION)
-        for req in self.pathconditions.must_not:
-            yield QualifiedRequirement(req, Qualifier.MUST_NOT, Section.PATHCONDITION)
         for req in self.pathconditions.should:
             yield QualifiedRequirement(req, Qualifier.SHOULD, Section.PATHCONDITION)
-        for req in self.pathconditions.should_not:
-            yield QualifiedRequirement(req, Qualifier.SHOULD_NOT, Section.PATHCONDITION)
 
     @property
     def is_empty(self):
