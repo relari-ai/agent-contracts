@@ -1,34 +1,40 @@
+import logging
 from dataclasses import dataclass
-from json import dumps as json_dump
 from typing import Any
+
 import json_repair as json
 from openai import AsyncOpenAI
 from pydantic import BaseModel
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_random_exponential,
+)
 
+from agent_contracts.core.datatypes.dataset.requirement import NLRequirement
 from agent_contracts.core.datatypes.verification.exec_path import (
     Action,
     ExecutionPath,
     State,
 )
-from agent_contracts.core.datatypes.dataset.requirement import NLRequirement
 from agent_contracts.core.prompts.provider import PromptProvider
 
 from .exec_path_utils import exec_path_to_str_compact
-import logging
 
 logger = logging.getLogger(__name__)
+
 
 def redact_info(info: Any):
     if isinstance(info, dict):
         # Remove sensitive keys
         for key in ["otel", "span", "token_usage"]:
             info.pop(key, None)
-        
-        # If the dict has exactly the keys {"lc", "type", "id", "kwargs"}, 
+
+        # If the dict has exactly the keys {"lc", "type", "id", "kwargs"},
         # then unwrap it by redacting and returning its "kwargs" value.
         if set(info.keys()) == {"lc", "type", "id", "kwargs"}:
             return redact_info(info["kwargs"])
-        
+
         # Recursively update each value in the dictionary.
         for k, v in info.items():
             info[k] = redact_info(v)
@@ -41,7 +47,6 @@ def redact_info(info: Any):
         if info.startswith("data:image"):
             return "__REDACTED__"
     return info
-
 
 
 @dataclass
@@ -79,26 +84,34 @@ class NLRequirementChecker:
         self.client = AsyncOpenAI()
         self.model = model
         self.requirement = requirement
+        self.prompt_templates = {
+            "init": PromptProvider.get_prompt("verification/nl/init"),
+            "step": PromptProvider.get_prompt("verification/nl/step"),
+            "verify": PromptProvider.get_prompt("verification/nl/verify"),
+        }
         self.schema = None
         self.instructions = None
         self.success_condition = None
         self.updates = []
         self.verify_result = None
 
+    @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
+    async def _completion(self, **kwargs) -> BaseModel:
+        response = await self.client.beta.chat.completions.parse(**kwargs)
+        return response.choices[0].message.parsed
+
     async def init(self, exec_path: ExecutionPath, requirement: NLRequirement) -> None:
-        prompt = PromptProvider.get_prompt("verification/nl/init")
-        msgs = prompt.render(
+        msgs = self.prompt_templates["init"].render(
             exec_path=exec_path_to_str_compact(exec_path),
             requirement=requirement.requirement,
         )
         valid = False
         while not valid:
-            response = await self.client.beta.chat.completions.parse(
+            _schema = await self._completion(
                 model=self.model,
                 messages=msgs,
                 response_format=_Schema,
             )
-            _schema = response.choices[0].message.parsed
             try:
                 parsed_schema = json.loads(_schema.state_schema)
             except json.JSONDecodeError:
@@ -115,29 +128,22 @@ class NLRequirementChecker:
         if not self.schema or not self.instructions:
             raise RuntimeError("You have to call init first")
         ctx = self.updates[-1].result if self.updates else self.schema
-        prompt = PromptProvider.get_prompt("verification/nl/step")
         action_dump = action.model_dump()
         action_dump["info"] = redact_info(action_dump["info"])
-        msgs = prompt.render(
+        msgs = self.prompt_templates["step"].render(
             state=state,
             requirement=self.requirement.requirement,
             instructions=self.instructions,
             schema=ctx,
             action=action_dump,
         )
-        tokens = int(sum(len(msg["content"]) for msg in msgs) / 4.2)
-        if tokens > 120000:
-            raise RuntimeError("Too many tokens")
-        # with open("usr_msg.txt", "w") as f:
-        #     f.write(msgs[-1]["content"])
         valid = False
         while not valid:
-            response = await self.client.beta.chat.completions.parse(
+            result = await self._completion(
                 model=self.model,
                 messages=msgs,
                 response_format=_Step,
             )
-            result = response.choices[0].message.parsed
             try:
                 parsed_result = json.loads(result.result)
             except json.JSONDecodeError:
@@ -153,17 +159,15 @@ class NLRequirementChecker:
         )
 
     async def verify(self) -> bool:
-        prompt = PromptProvider.get_prompt("verification/nl/verify")
-        msgs = prompt.render(
+        msgs = self.prompt_templates["verify"].render(
             requirement=self.requirement.requirement,
             instructions=self.instructions,
             updates=self.updates,
             success_condition=self.success_condition,
         )
-        response = await self.client.beta.chat.completions.parse(
+        self.verify_result = await self._completion(
             model=self.model,
             messages=msgs,
             response_format=_VerifyResult,
         )
-        self.verify_result = response.choices[0].message.parsed
         return self.verify_result.satisfied

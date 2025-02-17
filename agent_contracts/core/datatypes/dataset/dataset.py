@@ -78,6 +78,9 @@ class Dataset(BaseModel):
 
     def __len__(self):
         return len(self.scenarios)
+    
+    def __contains__(self, uuid: str):
+        return any(scenario.uuid == uuid for scenario in self.scenarios)
 
     def save(self, path: str):
         path = Path(path)
