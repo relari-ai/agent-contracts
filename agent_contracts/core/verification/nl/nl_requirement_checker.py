@@ -1,6 +1,5 @@
 import logging
-from dataclasses import dataclass
-from typing import Any
+from typing import Any, Dict, List
 
 import json_repair as json
 from openai import AsyncOpenAI
@@ -20,6 +19,7 @@ from agent_contracts.core.datatypes.verification.exec_path import (
 from agent_contracts.core.prompts.provider import PromptProvider
 
 from .exec_path_utils import exec_path_to_str_compact
+from agent_contracts.core.verification.base import VerificationResults
 
 logger = logging.getLogger(__name__)
 
@@ -49,10 +49,9 @@ def redact_info(info: Any):
     return info
 
 
-@dataclass
-class StepResult:
+class StepResult(BaseModel):
     span_id: str
-    result: str
+    result: Dict
     reasoning: str
 
 
@@ -62,14 +61,8 @@ class _Schema(BaseModel):
     instructions: str
     success_condition: str
 
-    class Config:
-        json_encoders = {
-            # Prevent the default method from being serialized
-            type: lambda v: str(v) if callable(v) else v
-        }
 
-
-class _Step(BaseModel):
+class Step(BaseModel):
     result: str
     reasoning: str
 
@@ -77,6 +70,12 @@ class _Step(BaseModel):
 class _VerifyResult(BaseModel):
     explanation: str
     satisfied: bool
+
+
+class NLVerificationInfo(BaseModel):
+    updates: List[StepResult]
+    step_success_condition: str
+    step_update_instruction: str
 
 
 class NLRequirementChecker:
@@ -142,7 +141,7 @@ class NLRequirementChecker:
             result = await self._completion(
                 model=self.model,
                 messages=msgs,
-                response_format=_Step,
+                response_format=Step,
             )
             try:
                 parsed_result = json.loads(result.result)
@@ -158,7 +157,7 @@ class NLRequirementChecker:
             )
         )
 
-    async def verify(self) -> bool:
+    async def verify(self) -> VerificationResults:
         msgs = self.prompt_templates["verify"].render(
             requirement=self.requirement.requirement,
             instructions=self.instructions,
@@ -170,4 +169,12 @@ class NLRequirementChecker:
             messages=msgs,
             response_format=_VerifyResult,
         )
-        return self.verify_result.satisfied
+        return VerificationResults(
+            satisfied=self.verify_result.satisfied,
+            explanation=self.verify_result.explanation,
+            info=NLVerificationInfo(
+                step_success_condition=str(self.success_condition),
+                step_update_instruction=str(self.instructions),
+                updates=self.updates,
+            ),
+        )

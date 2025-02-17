@@ -93,11 +93,16 @@ class CLIAdapter:
                 json.dump(
                     {
                         "trace_id": trace_id,
-                        "dataset_id": dataset.uuid,
+                        "dataset_id": dataset.uuid if dataset else None,
                         "contracts": {
                             contract.uuid: {
                                 "status": results[contract.uuid][0].name,
-                                "requirements": results[contract.uuid][1],
+                                "requirements": {
+                                    rid: r.model_dump(
+                                        exclude_unset=True, exclude_none=True
+                                    )
+                                    for rid, r in results[contract.uuid][1].items()
+                                },
                             }
                             for contract in scenario.contracts
                         },
@@ -151,13 +156,17 @@ class CLIAdapter:
             click.echo(f"No traces found for run {run_id}, done.")
             return
         if not all(trace.dataset_id == dataset.uuid for trace in traces):
-            click.echo("Warning: Traces does not match the dataset, trying to verify anyway...")
+            click.echo(
+                "Warning: Traces does not match the dataset, trying to verify anyway..."
+            )
         missing_scenarios = []
         for trace in traces:
             if trace.scenario_id not in dataset:
                 missing_scenarios.append(trace.scenario_id)
         if missing_scenarios:
-            click.Abort(f"Scenarios {missing_scenarios} not found in dataset, aborting...")
+            click.Abort(
+                f"Scenarios {missing_scenarios} not found in dataset, aborting..."
+            )
         cc = ContractChecker()
         group = [_verify_trace(trace.trace_id, dataset, cc) for trace in traces]
         results = await asyncio.gather(*group)
@@ -167,10 +176,16 @@ class CLIAdapter:
                 rex = [
                     {
                         "trace_id": trace_id,
+                        "dataset_id": dataset.uuid if dataset else None,
                         "contracts": {
                             contract_id: {
                                 "status": contract_inner_results[0].name,
-                                "requirements": contract_inner_results[1],
+                                "requirements": {
+                                    rid: r.model_dump(
+                                        exclude_unset=True, exclude_none=True
+                                    )
+                                    for rid, r in contract_inner_results[1].items()
+                                },
                             }
                             for contract_id, contract_inner_results in contract_results.items()
                         },

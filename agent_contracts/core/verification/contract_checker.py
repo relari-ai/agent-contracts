@@ -50,7 +50,7 @@ class ContractChecker:
             qualifier = qualified_req.qualifier
             if "should" in qualifier.value:
                 continue
-            adj_val = qualifier.apply(result)
+            adj_val = qualifier.apply(result.satisfied)
             if section == Section.PRECONDITION and not adj_val:
                 return ContractStatus.INVALID, req_results
             satisfied = satisfied and adj_val

@@ -1,18 +1,19 @@
-from agent_contracts.core.datatypes.verification.exec_path import ExecutionPath
 from agent_contracts.core.datatypes.dataset.contract import QualifiedRequirement
 from agent_contracts.core.datatypes.dataset.requirement import (
     DeterministicRequirement,
     NLRequirement,
 )
+from agent_contracts.core.datatypes.verification.exec_path import ExecutionPath
+
+from .base import VerificationResults
 from .nl.nl_requirement_checker import NLRequirementChecker
-from typing import Tuple
 
 
 class RequirementChecker:
     @staticmethod
     async def check(
         exec_path: ExecutionPath, requirement: QualifiedRequirement
-    ) -> Tuple[str, bool]:
+    ) -> VerificationResults:
         if isinstance(requirement.requirement, NLRequirement):
             return await RequirementChecker._check_nl_requirement(
                 exec_path, requirement
@@ -27,7 +28,7 @@ class RequirementChecker:
     @staticmethod
     async def _check_nl_requirement(
         exec_path: ExecutionPath, requirement: NLRequirement
-    ) -> bool:
+    ) -> VerificationResults:
         checker = NLRequirementChecker(requirement)
         await checker.init(exec_path, requirement)
         for state in exec_path.states:
@@ -38,5 +39,5 @@ class RequirementChecker:
     @staticmethod
     async def _check_deterministic_requirement(
         exec_path: ExecutionPath, requirement: DeterministicRequirement
-    ) -> bool:
-        return True
+    ) -> VerificationResults:
+        return VerificationResults(satisfied=True)
