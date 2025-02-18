@@ -1,20 +1,16 @@
-Requirement:
-{{ requirement.requirement }}
-
-Schema:
+Current verification internal state:
 ```json
 {{ schema | tojson() }}
 ```
+Update instructions: {{ instructions }}
 
-Schema update instructions:
-```
-{{ instructions }}
-```
+{%if prev_reasoning %}Reason for previous update: {{ prev_reasoning }}{%endif%}
 
-State name: {{ state.name }}
-Current action:
+State name: "{{ state.name }}"
+State current action:
 ```json
 {{ action | tojson() }}
 ```
+
 
 Updated Schema:

@@ -163,6 +163,7 @@ class NLRequirementChecker:
                 model=self.model.step,
                 messages=msgs,
                 response_format=Step,
+                temperature=0.0,
             )
             try:
                 parsed_result = json.loads(result.result)

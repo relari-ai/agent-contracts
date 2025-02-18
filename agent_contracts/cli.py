@@ -129,7 +129,7 @@ class CLIAdapter:
                     qreq.requirement.name,
                     (
                         "[green]Yes[/green]"
-                        if cresults[qreq.requirement.uuid]
+                        if cresults[qreq.requirement.uuid].satisfied
                         else "[red]No[/red]"
                     ),
                 )
@@ -217,7 +217,7 @@ class CLIAdapter:
                         qreq.requirement.name,
                         (
                             "[green]Yes[/green]"
-                            if cresults[qreq.requirement.uuid]
+                            if cresults[qreq.requirement.uuid].satisfied
                             else "[red]No[/red]"
                         ),
                     )
