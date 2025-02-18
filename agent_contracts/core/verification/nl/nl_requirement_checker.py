@@ -78,15 +78,36 @@ class NLVerificationInfo(BaseModel):
     step_update_instruction: str
 
 
+class StepConfig(BaseModel):
+    init: str
+    step: str
+    verify: str
+
+
+class NLVerificationConfig(BaseModel):
+    models: StepConfig = StepConfig(
+        init="o3-mini", step="gpt-4o-mini", verify="o3-mini"
+    )
+    prompts: StepConfig = StepConfig(
+        init="verification/nl/init",
+        step="verification/nl/step",
+        verify="verification/nl/verify",
+    )
+
+
 class NLRequirementChecker:
-    def __init__(self, requirement: NLRequirement, model: str = "gpt-4o-mini"):
+    def __init__(
+        self,
+        requirement: NLRequirement,
+        config: NLVerificationConfig = NLVerificationConfig(),
+    ):
         self.client = AsyncOpenAI()
-        self.model = model
+        self.model = config.models
         self.requirement = requirement
         self.prompt_templates = {
-            "init": PromptProvider.get_prompt("verification/nl/init"),
-            "step": PromptProvider.get_prompt("verification/nl/step"),
-            "verify": PromptProvider.get_prompt("verification/nl/verify"),
+            "init": PromptProvider.get_prompt(config.prompts.init),
+            "step": PromptProvider.get_prompt(config.prompts.step),
+            "verify": PromptProvider.get_prompt(config.prompts.verify),
         }
         self.schema = None
         self.instructions = None
@@ -94,7 +115,7 @@ class NLRequirementChecker:
         self.updates = []
         self.verify_result = None
 
-    @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
+    # @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
     async def _completion(self, **kwargs) -> BaseModel:
         response = await self.client.beta.chat.completions.parse(**kwargs)
         return response.choices[0].message.parsed
@@ -107,7 +128,7 @@ class NLRequirementChecker:
         valid = False
         while not valid:
             _schema = await self._completion(
-                model=self.model,
+                model=self.model.init,
                 messages=msgs,
                 response_format=_Schema,
             )
@@ -139,7 +160,7 @@ class NLRequirementChecker:
         valid = False
         while not valid:
             result = await self._completion(
-                model=self.model,
+                model=self.model.step,
                 messages=msgs,
                 response_format=Step,
             )
@@ -165,7 +186,7 @@ class NLRequirementChecker:
             success_condition=self.success_condition,
         )
         self.verify_result = await self._completion(
-            model=self.model,
+            model=self.model.verify,
             messages=msgs,
             response_format=_VerifyResult,
         )
