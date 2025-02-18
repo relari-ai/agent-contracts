@@ -1,6 +1,6 @@
 import json_repair
 from typing import Dict, Any
-
+from datetime import datetime
 
 def attribute_value(attribute: Dict[str, Any]):
     if "value" not in attribute:
@@ -93,3 +93,8 @@ def insert_into(current, path, value):
         else:
             current[key] = insert_into(current.get(key), rest, value)
         return current
+
+def unix_nano_to_datetime(unix_nano: int | str) -> datetime:
+    if isinstance(unix_nano, str):
+        unix_nano = int(unix_nano)
+    return datetime.fromtimestamp(unix_nano / 1e9)

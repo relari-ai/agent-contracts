@@ -1,7 +1,8 @@
 from typing import Any, Dict, Optional
-from uuid import uuid4
 
 from pydantic import BaseModel
+
+from agent_contracts.core.utils.nanoid import nanoid
 
 
 class DeterministicRequirement(BaseModel):
@@ -15,7 +16,7 @@ class DeterministicRequirement(BaseModel):
 
     def model_post_init(self, __context: Any):
         if not self.uuid:
-            self.uuid = str(uuid4())
+            self.uuid = f"req-{nanoid(8)}"
 
     def model_dump(self):
         return {"type": "deterministic", **super().model_dump()}
@@ -30,8 +31,8 @@ class NLRequirement(BaseModel):
 
     def model_post_init(self, __context: Any):
         if not self.uuid:
-            self.uuid = str(uuid4())
-
+            self.uuid = f"req-{nanoid(8)}"
+            
     @property
     def name(self):
         return self.requirement

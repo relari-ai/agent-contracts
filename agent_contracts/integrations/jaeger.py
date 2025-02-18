@@ -4,7 +4,7 @@ import aiohttp
 
 from agent_contracts.core.datatypes.trace import Trace
 from agent_contracts.core.datatypes.trace.semcov import EvalAttributes
-from agent_contracts.core.utils.trace_attributes import get_attribute_value
+from agent_contracts.core.utils.trace_attributes import get_attribute_value, unix_nano_to_datetime
 
 from .base import RunIdInfo, TraceInfo
 
@@ -72,12 +72,8 @@ class JaegerClient:
                     scenario_id = get_attribute_value(
                         span["attributes"], key=EvalAttributes.SCENARIO_ID
                     )
-                    _start_time = datetime.fromtimestamp(
-                        int(span["startTimeUnixNano"]) / 1e9
-                    )
-                    _end_time = datetime.fromtimestamp(
-                        int(span["endTimeUnixNano"]) / 1e9
-                    )
+                    _start_time = unix_nano_to_datetime(span["startTimeUnixNano"])
+                    _end_time = unix_nano_to_datetime(span["endTimeUnixNano"])
                     if start_time is None or _start_time < start_time:
                         start_time = _start_time
                     if end_time is None or _end_time > end_time:

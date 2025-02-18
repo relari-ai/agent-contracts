@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field, field_serializer
 
 from .contract import Contract
-
+from agent_contracts.core.utils.nanoid import nanoid
 
 class Scenario(BaseModel):
     uuid: str
@@ -32,7 +32,7 @@ class Scenario(BaseModel):
                 string_repr = str(data.__dict__).encode()
             except Exception:
                 string_repr = str(name).encode() if name else os.urandom(64)
-        return hashlib.blake2b(string_repr, digest_size=4).hexdigest()
+        return f"scene-{hashlib.blake2b(string_repr, digest_size=4).hexdigest()}"
 
     def get_contract(self, uuid: str):
         for contract in self.contracts:
@@ -47,8 +47,7 @@ class Dataset(BaseModel):
 
     def __init__(self, scenarios: List[Scenario], uuid: Optional[str] = None, **kwargs):
         if not uuid:
-            scenarios_repr = json.dumps([s.model_dump() for s in scenarios])
-            uuid = hashlib.blake2b(scenarios_repr.encode(), digest_size=4).hexdigest()
+            uuid = nanoid(8)
         super().__init__(scenarios=scenarios, uuid=uuid, **kwargs)
 
     def __post_init__(self):

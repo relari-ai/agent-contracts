@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from enum import Enum
 from re import Pattern as RegexPattern
 from typing import Any, Generator, List, Optional, Union
-from uuid import uuid4
 
 from pydantic import BaseModel, Field, field_serializer, field_validator
 
@@ -10,6 +9,7 @@ from agent_contracts.core.datatypes.dataset.requirement import (
     DeterministicRequirement,
     NLRequirement,
 )
+from agent_contracts.core.utils.nanoid import nanoid
 
 RequirementType = Union[NLRequirement, DeterministicRequirement]
 
@@ -23,7 +23,6 @@ class Section(Enum):
 class Qualifier(Enum):
     MUST = "must"
     SHOULD = "should"
-
 
 
 @dataclass
@@ -42,10 +41,7 @@ class Requirements(BaseModel):
         arbitrary_types_allowed = True
 
     def __len__(self):
-        return (
-            len(self.must)
-            + len(self.should)
-        )
+        return len(self.must) + len(self.should)
 
     def __iter__(self) -> Generator[RequirementType, None, None]:
         for req in self.must:
@@ -59,7 +55,7 @@ class Requirements(BaseModel):
             return []
         return value
 
-    @field_validator("must","should",  mode="before")
+    @field_validator("must", "should", mode="before")
     def parse_requirements(cls, values):
         new_list = []
         for value in values:
@@ -90,7 +86,7 @@ class Contract(BaseModel):
 
     def model_post_init(self, __context: Any):
         if not self.uuid:
-            self.uuid = str(uuid4())
+            self.uuid = f"con-{nanoid(8)}"
 
     class Config:
         arbitrary_types_allowed = True
