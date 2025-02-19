@@ -79,7 +79,7 @@ class Requirements(BaseModel):
 class Contract(BaseModel):
     uuid: Optional[str] = None
     name: str
-    condition: Optional[RegexPattern] = None
+    guard: Optional[RegexPattern] = None
     preconditions: Requirements = Requirements()
     postconditions: Requirements = Requirements()
     pathconditions: Requirements = Requirements()

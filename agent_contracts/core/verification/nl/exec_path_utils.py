@@ -2,7 +2,32 @@ from typing import Any, Dict
 
 from agent_contracts.core.datatypes.verification.exec_path import ExecutionPath
 
-IGNORE_KEYS = ["metadata"]
+IGNORE_KEYS = ["metadata", "otel", "token_count", "span", "session"]
+
+
+def redact_info(info: Any):
+    if isinstance(info, dict):
+        # Remove sensitive keys
+        for key in ["otel", "span", "token_usage"]:
+            info.pop(key, None)
+
+        # If the dict has exactly the keys {"lc", "type", "id", "kwargs"},
+        # then unwrap it by redacting and returning its "kwargs" value.
+        if set(info.keys()) == {"lc", "type", "id", "kwargs"}:
+            return redact_info(info["kwargs"])
+
+        # Recursively update each value in the dictionary.
+        for k, v in info.items():
+            info[k] = redact_info(v)
+        return info
+
+    elif isinstance(info, list):
+        return [redact_info(item) for item in info]
+
+    elif isinstance(info, str):
+        if info.startswith("data:image"):
+            return "__REDACTED__"
+    return info
 
 
 def exec_path_to_str_compact(
@@ -15,14 +40,20 @@ def exec_path_to_str_compact(
 
     def process_info(info: Dict[str, Any], max_length: int = 30) -> str:
         """Formats info with two-level keys preserved, truncating deep values and adding type hints."""
+        infox = redact_info(info)
         processed = {}
-        for key, value in info.items():
+        for key, value in infox.items():
             if key in IGNORE_KEYS:
                 continue
             if isinstance(value, dict):  # Nested dict, keep two levels
                 processed[key] = {}
                 for sub_key, sub_value in value.items():
-                    if isinstance(sub_value, (dict, set)):  # Dict or Set → Show type
+                    if sub_key in IGNORE_KEYS:
+                        continue
+                    str_value = str(sub_value)
+                    if len(str_value) < max_length:
+                        processed[key][sub_key] = str_value
+                    elif isinstance(sub_value, (dict, set)):  # Dict or Set → Show type
                         processed[key][sub_key] = "{...}"
                     elif isinstance(sub_value, list):  # List → Show type
                         processed[key][sub_key] = "[...]"

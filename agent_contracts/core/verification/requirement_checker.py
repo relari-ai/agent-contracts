@@ -30,10 +30,16 @@ class RequirementChecker:
         exec_path: ExecutionPath, requirement: NLRequirement
     ) -> VerificationResults:
         checker = NLRequirementChecker(requirement)
-        await checker.init(exec_path, requirement)
+        early_termination = False
+        await checker.init(exec_path)
         for state in exec_path.states:
+            if early_termination:
+                break
             for action in state.actions:
-                await checker.step(state, action)
+                update = await checker.step(state, action)
+                early_termination = update.early_termination
+                if early_termination:
+                    break
         return await checker.verify()
 
     @staticmethod
