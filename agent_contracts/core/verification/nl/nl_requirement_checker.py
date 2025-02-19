@@ -1,14 +1,10 @@
 import logging
-from typing import Any, Dict, List
+from typing import Dict, List
 
 import json_repair as json
 from openai import AsyncOpenAI
 from pydantic import BaseModel
-from tenacity import (
-    retry,
-    stop_after_attempt,
-    wait_random_exponential,
-)
+from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 from agent_contracts.core.datatypes.dataset.requirement import NLRequirement
 from agent_contracts.core.datatypes.verification.exec_path import (
@@ -17,42 +13,21 @@ from agent_contracts.core.datatypes.verification.exec_path import (
     State,
 )
 from agent_contracts.core.prompts.provider import PromptProvider
+from agent_contracts.core.verification.base import (
+    VerificationResults,
+    VerificationInstructions,
+)
 
-from .exec_path_utils import exec_path_to_str_compact
-from agent_contracts.core.verification.base import VerificationResults
+from .exec_path_utils import exec_path_to_str_compact, redact_info
 
 logger = logging.getLogger(__name__)
-
-
-def redact_info(info: Any):
-    if isinstance(info, dict):
-        # Remove sensitive keys
-        for key in ["otel", "span", "token_usage"]:
-            info.pop(key, None)
-
-        # If the dict has exactly the keys {"lc", "type", "id", "kwargs"},
-        # then unwrap it by redacting and returning its "kwargs" value.
-        if set(info.keys()) == {"lc", "type", "id", "kwargs"}:
-            return redact_info(info["kwargs"])
-
-        # Recursively update each value in the dictionary.
-        for k, v in info.items():
-            info[k] = redact_info(v)
-        return info
-
-    elif isinstance(info, list):
-        return [redact_info(item) for item in info]
-
-    elif isinstance(info, str):
-        if info.startswith("data:image"):
-            return "__REDACTED__"
-    return info
 
 
 class StepResult(BaseModel):
     span_id: str
     result: Dict
     reasoning: str
+    early_termination: bool
 
 
 class _Schema(BaseModel):
@@ -60,11 +35,13 @@ class _Schema(BaseModel):
     state_schema: str
     instructions: str
     success_condition: str
+    early_termination: str
 
 
 class Step(BaseModel):
-    result: str
     reasoning: str
+    result: str
+    early_termination: bool
 
 
 class _VerifyResult(BaseModel):
@@ -93,6 +70,7 @@ class NLVerificationConfig(BaseModel):
         step="verification/nl/step",
         verify="verification/nl/verify",
     )
+    early_termination: bool = True
 
 
 class NLRequirementChecker:
@@ -102,7 +80,7 @@ class NLRequirementChecker:
         config: NLVerificationConfig = NLVerificationConfig(),
     ):
         self.client = AsyncOpenAI()
-        self.model = config.models
+        self.config = config
         self.requirement = requirement
         self.prompt_templates = {
             "init": PromptProvider.get_prompt(config.prompts.init),
@@ -120,15 +98,16 @@ class NLRequirementChecker:
         response = await self.client.beta.chat.completions.parse(**kwargs)
         return response.choices[0].message.parsed
 
-    async def init(self, exec_path: ExecutionPath, requirement: NLRequirement) -> None:
+    async def init(self, exec_path: ExecutionPath) -> None:
         msgs = self.prompt_templates["init"].render(
             exec_path=exec_path_to_str_compact(exec_path),
-            requirement=requirement.requirement,
+            requirement=self.requirement.requirement,
+            early_termination=self.config.early_termination,
         )
         valid = False
         while not valid:
             _schema = await self._completion(
-                model=self.model.init,
+                model=self.config.models.init,
                 messages=msgs,
                 response_format=_Schema,
             )
@@ -143,8 +122,11 @@ class NLRequirementChecker:
         self.schema = parsed_schema
         self.instructions = _schema.instructions.strip()
         self.success_condition = _schema.success_condition.strip()
+        self.early_termination = (
+            _schema.early_termination.strip() or "Never terminate early"
+        )
 
-    async def step(self, state: State, action: Action) -> None:
+    async def step(self, state: State, action: Action) -> StepResult:
         if not self.schema or not self.instructions:
             raise RuntimeError("You have to call init first")
         ctx = self.updates[-1].result if self.updates else self.schema
@@ -152,15 +134,16 @@ class NLRequirementChecker:
         action_dump["info"] = redact_info(action_dump["info"])
         msgs = self.prompt_templates["step"].render(
             state=state,
-            requirement=self.requirement.requirement,
-            instructions=self.instructions,
-            schema=ctx,
             action=action_dump,
+            schema=ctx,
+            prev_reasoning=self.updates[-1].reasoning if self.updates else None,
+            update_instructions=self.instructions,
+            early_termination=self.early_termination,
         )
         valid = False
         while not valid:
             result = await self._completion(
-                model=self.model.step,
+                model=self.config.models.step,
                 messages=msgs,
                 response_format=Step,
                 temperature=0.0,
@@ -173,11 +156,16 @@ class NLRequirementChecker:
                 valid = True
             else:
                 logger.debug("Invalid step result, retrying...")
-        self.updates.append(
-            StepResult(
-                span_id=action.span_id, result=parsed_result, reasoning=result.reasoning
-            )
+        update = StepResult(
+            span_id=action.span_id,
+            result=parsed_result,
+            reasoning=result.reasoning,
+            early_termination=(
+                self.config.early_termination and result.early_termination
+            ),
         )
+        self.updates.append(update)
+        return update
 
     async def verify(self) -> VerificationResults:
         msgs = self.prompt_templates["verify"].render(
@@ -187,13 +175,17 @@ class NLRequirementChecker:
             success_condition=self.success_condition,
         )
         self.verify_result = await self._completion(
-            model=self.model.verify,
+            model=self.config.models.verify,
             messages=msgs,
             response_format=_VerifyResult,
         )
         return VerificationResults(
             satisfied=self.verify_result.satisfied,
             explanation=self.verify_result.explanation,
+            instructions=VerificationInstructions(
+                update=str(self.instructions),
+                early_termination=str(self.early_termination),
+            ),
             info=NLVerificationInfo(
                 step_success_condition=str(self.success_condition),
                 step_update_instruction=str(self.instructions),

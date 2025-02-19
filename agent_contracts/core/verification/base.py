@@ -2,10 +2,14 @@ from typing import Optional
 
 from pydantic import BaseModel, field_serializer
 
+class VerificationInstructions(BaseModel):
+    update: str
+    early_termination: str
 
 class VerificationResults(BaseModel):
     satisfied: bool
     explanation: Optional[str] = None
+    instructions: Optional[VerificationInstructions] = None
     info: Optional[BaseModel] = None
 
     @field_serializer("info")

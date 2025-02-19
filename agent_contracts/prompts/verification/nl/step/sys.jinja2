@@ -2,99 +2,32 @@ You are part of a verification pipeline that processes an execution trace one ac
 
 # Instructions
 
-1. **Parse the Input**:
-   - Extract the action, requirement, current JSON state (`schema`), and update instructions.
-2. **Analyze the Requirement and Schema**:
-   - Understand which state variables are critical to verifying the requirement.
-3. **Evaluate the Action**:
-   - Determine how the current action impacts the state. Look for explicit indicators in the action data.
-4. **Update the State**:
+1. **Analyze the Action**:
+   - Carefully analyze the action.
+2. **Analyze the Schema and the update instructions**:
+   - Understand the current internal state and the relation between the state and the update instructions.
+3. **Update the State**:
    - Modify the JSON state only when clear evidence from the action supports the update, following the provided instructions.
-5. **Validation**:
-   - Ensure the updated state retains the expected structure and data types.
+   - Provide the evidence in the `reasoning` field.
+4. **Early Termination**:
+   - Analyze the early termination condition and determine if you satisfied it. If you did, return `early_termination: True`.
+   - If you did not satisfy the early termination condition, return `early_termination: False`.
 
 # Output Format
 
 Return a JSON object with the following keys:
 - `reasoning`: A brief explanation of how the action was interpreted and how the state was updated.
 - `updated_state`: The new JSON state after processing the action.
+- `early_termination`: Whether the action satisfies the early termination condition.
+
+If no update is made, return `updated_state` as the same as the current state.
 
 # Example
-
-**Input:**
-Requirement:
-```
-The system should provide a list of available shirts to the user.
-```
-
-Schema:
-```json
-{
-  "shirts_provided": False
-}
-```
-
-Instructions:
-```
-If the system provides a list of available shirts, set the shirts_provided to True. Don't change the value otherwise.
-```
-
-Action:
-```json
-{
-  "span_id": "d624bfa6d11fbff0",
-  "name": "ChatOpenAI",
-  "info": {
-    "llm": {
-      "input_messages": [
-        { "message": { "content": "Hi", "role": "user" } },
-        {
-          "message": {
-            "content": "Hello! How can I assist you today?",
-            "role": "assistant"
-          }
-        },
-        {
-          "message": {
-            "content": "Hey, I'm looking for some shirts. What do you have available?",
-            "role": "user"
-          }
-        },
-        {
-          "message": {
-            "content": "Here are some shirts available for you:\n\n1. **S / Black**\n   - **Description:** Reimagine the feeling of a classic T-shirt. With our cotton T-shirts, everyday essentials no longer have to be ordinary.\n   - **SKU:** SHIRT-S-BLACK\n   - ![S / Black](https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-black-front.png)\n\n2. **S / White**\n   - **Description:** Reimagine the feeling of a classic T-shirt. With our cotton T-shirts, everyday essentials no longer have to be ordinary.\n   - **SKU:** SHIRT-S-WHITE\n   - ![S / White](https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-black-front.png)\n\n3. **M / Black**\n   - **Description:** Reimagine the feeling of a classic T-shirt. With our cotton T-shirts, everyday essentials no longer have to be ordinary.\n   - **SKU:** SHIRT-M-BLACK\n   - ![M / Black](https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-black-front.png)\n\n4. **M / White**\n   - **Description:** Reimagine the feeling of a classic T-shirt. With our cotton T-shirts, everyday essentials no longer have to be ordinary.\n   - **SKU:** SHIRT-M-WHITE\n   - ![M / White](https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-black-front.png)\n\n5. **L / Black**\n   - **Description:** Reimagine the feeling of a classic T-shirt. With our cotton T-shirts, everyday essentials no longer have to be ordinary.\n   - **SKU:** SHIRT-L-BLACK\n   - ![L / Black](https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-black-front.png)\n\n6. **L / White**\n   - **Description:** Reimagine the feeling of a classic T-shirt. With our cotton T-shirts, everyday essentials no longer have to be ordinary.\n   - **SKU:** SHIRT-L-WHITE\n   - ![L / White](https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-black-front.png)\n\n7. **XL / Black**\n   - **Description:** Reimagine the feeling of a classic T-shirt. With our cotton T-shirts, everyday essentials no longer have to be ordinary.\n   - **SKU:** SHIRT-XL-BLACK\n   - ![XL / Black](https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-black-front.png)\n\n8. **XL / White**\n   - **Description:** Reimagine the feeling of a classic T-shirt. With our cotton T-shirts, everyday essentials no longer have to be ordinary.\n   - **SKU:** SHIRT-XL-WHITE\n   - ![XL / White](https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-black-front.png)\n\nIf you need more information or want to make a purchase, let me know!",
-            "role": "assistant"
-          }
-        }
-      ],
-      "output_messages": [
-        {
-          "message": {
-            "content": "If you need more information about any specific shirt or want to make a purchase, just let me know!",
-            "role": "assistant"
-          }
-        }
-      ],
-    },
-  }
-}
-```
-
-**Output:**
-```json
-Reasoning:
-The action provided a list of available shirts to the user.
-
-Updated Schema:
-{
-  "shirts_provided": True
-}
-```
+{% include "example.jinja2" %}
 
 # Notes
 
-- If you are reviewing a chat, and the requirement or instructions require to check whether something happened, the fact that in the output messages the agent says something happens is not enough. You need to check if the action actually caused the event
+- When analyzing messages, try to understand what message is coming from the agent (e.g. it `model_name` information) and what message is coming from the user
+- If you are reviewing a chat, and the instructions require to check whether something happened, the fact that in the output messages the agent says something happens is not enough. You need to check if the action actually caused the event
 - Routing to an action does not count as performing an operation
 - Ensure proper validation and error handling if action or requirement cannot be applied as intended
-- Consider edge cases where the action cannot change the JSON state to meet the requirement
-- Be mindful of data types and structures within the JSON object to prevent any mismatches

@@ -1,0 +1,28 @@
+Current verification internal state:
+```json
+{
+  "shirts_provided": False
+}
+```
+
+**Update instructions**
+If the system provides a list of available shirts, set the shirts_provided to True. Don't change the value otherwise.
+
+**Early termination condition**
+If the system provides a list of available shirts, return `early_termination: True`.
+
+**Action**
+State name: Agent
+Action:
+{% include "example_action.jinja2" %}
+
+**Output:**
+```json
+{
+  "reasoning": "The action provided a list of available shirts to the user.",
+  "updated_state": {
+    "shirts_provided": True
+  },
+  "early_termination": True
+}
+```

@@ -3,9 +3,10 @@ You are part of a verification pipeline tasked with determining if an execution 
 # Instructions
 
 1. **Analyze the Requirement**: Read the requirement carefully and identify the minimal set of state variables necessary for its verification.
-2. **Initialize the State**: Create a JSON object with the initial state values, do not include any variables that are not relevant to the requirement or can be derived from a combination of other variables.
-3. **Define Update Instructions**: Provide explicit instructions on how the state should be modified when processing each action in the trace.
-4. **Specify Early Termination (Optional)**: If there is a condition that, when true, immediately implies the requirement is satisfied, provide a Python expression for it. If no such condition exists, leave this field empty.
+2. **Analyze the Execution Trace**: Read the execution trace carefully and identify the important actions that are relevant to the requirement.
+3. **Initialize the State**: Create a JSON object with the initial state values, do not include any variables that are not relevant to the requirement or can be derived from a combination of other variables.
+4. **Define Update Instructions**: Provide explicit instructions on how the state should be modified when processing each action in the trace.
+5. **Specify Early Termination (Optional)**: If there is a condition that, when true, immediately implies the requirement is satisfied, provide instructions on how to check it. If no such condition exists, leave this field empty.
 
 # Output Format
 
@@ -14,28 +15,49 @@ Return a JSON object with the following keys:
 - `state_schema`: A JSON object defining the initial value of the internal state.
 - `instructions`: A detailed string that describes how to update the state based on observed actions.
 - `success_condition`: How the state should be evaluated to determine if the requirement is satisfied.
+- `early_termination`: How the state should be evaluated to determine if the requirement is satisfied.
 
 # Examples
 
-## Example 1:
+## Trace:
+
+The trace is a sequence of state-actions like: 
+
+Trace ID: xxxxxxxx
+  ├─ StateName (ID:yyyyyyyy)
+  │  ├─ Actions:
+  │  │  ├─ ActionName (ID:zzzzzzzz)
+  │  │  │  ├─ info: {...}
+  │  │  ├─ ActionName (ID:zzzzzzzz)
+  │  │  │  ├─ info: {...}
+  ├─ StateName (ID:yyyyyyyy)
+  │  ├─ Actions:
+  │  │  ├─ ActionName (ID:zzzzzzzz)
+  │  │  │  ├─ info: {...}
+  ⋮
+
+Where the `⋮` represents the rest of the trace.
+
+## Requirement Example 1:
 
 **Requirement**  
 The system never asks for personal information beside name, email and shipping address
 
 **Output:**
 Reasoning:
-The requirement is about personal information, so the state should include a list of information asked.
+The requirement is about personal information, so the state should include a list of information asked. The early termination condition is that the list of information asked contains only something different from name, email and shipping address.
 
 ```json
 {
   "reasoning": "The requirement is about personal information, so the state should include a list of information asked.",
   "schema": {"personal_information_asked": []},
   "instructions": "add personal information asked by the system to the list.",
-  "success_condition": "personal_information_asked only contains any or all of the following: name, email and/or shipping address"
+  "success_condition": "personal_information_asked only contains any or all of the following: name, email and/or shipping address",
+  "early_termination": "personal_information_asked contains something different from name, email and shipping address"
 }
 ```
 
-## Example 2:
+## RequirementExample 2:
 
 **Requirement**  
 The system should check the order status before processing the return.
@@ -52,9 +74,11 @@ The requirement is about the order status and the relation with the return, so t
     "return_processed": False
   },
   "instructions": "If a call to a function that checks the order status is found, set the order_status_checked to True. Similarly, if a call to a function that processes the return is found, set the return_processed to True. Don't change the state otherwise.",
-  "success_condition": "order_status_checked and return_processed are both True"
+  "success_condition": "order_status_checked and return_processed are both True",
+  "early_termination": "order_status_checked is True and return_processed is False or order_status_checked is True and return_processed is updated to True"
 }
 ```
+
 
 # Notes
 

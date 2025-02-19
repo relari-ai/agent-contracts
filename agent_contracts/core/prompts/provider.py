@@ -17,18 +17,17 @@ class _PromptProvider:
         self.base_path = base_path
         self.valid_extensions = [".jinja2", ".txt", ".md"]
 
-    def _get_prompt(self, name: str, prompt_type: PromptType) -> str:
+    def _get_prompt_path(self, name: str, prompt_type: PromptType) -> str:
         for ext in self.valid_extensions:
             fname = f"{name}/{prompt_type.value}{ext}"
             if (self.base_path / fname).exists():
-                with open(self.base_path / fname, "r") as f:
-                    return f.read()
+                return self.base_path / fname
         return None
 
     def get_prompt(self, name: str) -> PromptTemplate:
-        return PromptTemplate(
-            system_prompt=self._get_prompt(name, PromptType.SYSTEM),
-            user_prompt=self._get_prompt(name, PromptType.USER),
+        return PromptTemplate.from_file(
+            system_prompt_path=self._get_prompt_path(name, PromptType.SYSTEM),
+            user_prompt_path=self._get_prompt_path(name, PromptType.USER),
         )
 
 
