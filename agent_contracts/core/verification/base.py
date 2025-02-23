@@ -9,7 +9,6 @@ class VerificationInstructions(BaseModel):
 class VerificationResults(BaseModel):
     satisfied: bool
     explanation: Optional[str] = None
-    instructions: Optional[VerificationInstructions] = None
     info: Optional[BaseModel] = None
 
     @field_serializer("info")

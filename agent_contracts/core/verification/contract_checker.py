@@ -1,17 +1,13 @@
-import asyncio
+from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, Tuple
+from typing import Dict, List
 
-from tqdm import tqdm
+from tqdm.asyncio import tqdm
 
-from agent_contracts.core.datatypes.dataset.contract import (
-    Contract,
-    QualifiedRequirement,
-    Qualifier,
-    Section,
-)
+from agent_contracts.core.datatypes.specifications.contract import Contract
+from agent_contracts.core.datatypes.specifications.requirement import Requirement, Level
 from agent_contracts.core.datatypes.verification.exec_path import ExecutionPath
-from agent_contracts.core.verification.requirement_checker import RequirementChecker
+from agent_contracts.core.verification.base import VerificationResults
 
 
 class ContractStatus(Enum):
@@ -20,36 +16,57 @@ class ContractStatus(Enum):
     UNSATISFIED = False
 
 
-class ContractChecker:
-    def __init__(self):
-        self._req_checker = RequirementChecker()
+@dataclass
+class ContractVerificationResults:
+    satisfied: bool
+    info: Dict[str, bool]
 
-    async def _check_requirement(
-        self, pbar: tqdm, trace: ExecutionPath, qualified_req: QualifiedRequirement
-    ) -> Tuple[bool, bool]:
-        result = await self._req_checker.check(trace, qualified_req)
-        pbar.update(1)
-        return qualified_req.requirement.uuid, result
+
+class ContractChecker:
+    @staticmethod
+    def prepare_requirement_input(req: Requirement, exec_path: ExecutionPath) -> dict:
+        if req.type == "precondition":
+            return exec_path.input
+        elif req.type == "pathcondition":
+            return exec_path
+        elif req.type == "postcondition":
+            if req.on == "output":
+                return exec_path.output
+            elif req.on == "conversation":
+                return exec_path.conversation
+            else:
+                raise ValueError(f"Invalid requirement type: {req.type}")
+        else:
+            raise ValueError(f"Invalid requirement type: {req.type}")
+
+    def _compute_contract_status(
+        self, contract: Contract, check_results: List[VerificationResults]
+    ) -> ContractStatus:
+        preconditions, musts = True, True
+        for req, result in zip(contract, check_results):
+            if req.level == Level.SHOULD:
+                # Should do not affect the contract satisfiability
+                continue
+            if req.type == "precondition":
+                preconditions = preconditions and result.satisfied
+            else:
+                musts = musts and result.satisfied
+            if not preconditions:
+                return ContractStatus.INVALID
+            if not musts:
+                return ContractStatus.UNSATISFIED
+        return ContractStatus.SATISFIED
 
     async def check(
-        self, trace: ExecutionPath, contract: Contract
-    ) -> Tuple[ContractStatus, Dict[str, bool]]:
-        pbar = tqdm(total=len(contract), desc="Contract")
+        self, trace: ExecutionPath, contract: Contract, progress: bool = True
+    ) -> ContractVerificationResults:
         group = [
-            self._check_requirement(pbar, trace, qualified_req)
-            for qualified_req in contract
+            req.check(self.prepare_requirement_input(req, trace)) for req in contract
         ]
-        check_results = await asyncio.gather(*group)
-        req_results = {uuid: res for uuid, res in check_results}
-        pbar.close()
-
-        # Is it satisfied?
-        satisfied = True
-        for req_uuid, result in req_results.items():
-            req = contract[req_uuid]
-            if req.qualifier == Qualifier.SHOULD:
-                continue
-            if  req.section == Section.PRECONDITION and not result.satisfied:
-                return ContractStatus.INVALID, req_results
-            satisfied = satisfied and result.satisfied
-        return ContractStatus(satisfied), req_results
+        check_results = await tqdm.gather(
+            *group, desc=f"Contract {contract.name}", disable=not progress
+        )
+        return ContractVerificationResults(
+            satisfied=self._compute_contract_status(contract, check_results),
+            info={req.uuid: result for req, result in zip(contract, check_results)},
+        )

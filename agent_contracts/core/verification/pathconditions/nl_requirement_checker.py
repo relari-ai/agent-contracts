@@ -1,12 +1,11 @@
 import logging
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import json_repair as json
 from openai import AsyncOpenAI
 from pydantic import BaseModel
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
-from agent_contracts.core.datatypes.dataset.requirement import NLRequirement
 from agent_contracts.core.datatypes.verification.exec_path import (
     Action,
     ExecutionPath,
@@ -14,8 +13,8 @@ from agent_contracts.core.datatypes.verification.exec_path import (
 )
 from agent_contracts.core.prompts.provider import PromptProvider
 from agent_contracts.core.verification.base import (
-    VerificationResults,
     VerificationInstructions,
+    VerificationResults,
 )
 
 from .exec_path_utils import exec_path_to_str_compact, redact_info
@@ -50,6 +49,7 @@ class _VerifyResult(BaseModel):
 
 
 class NLVerificationInfo(BaseModel):
+    instructions: Optional[VerificationInstructions] = None
     updates: List[StepResult]
     step_success_condition: str
     step_update_instruction: str
@@ -66,9 +66,9 @@ class NLVerificationConfig(BaseModel):
         init="o3-mini", step="gpt-4o-mini", verify="o3-mini"
     )
     prompts: StepConfig = StepConfig(
-        init="verification/nl/init",
-        step="verification/nl/step",
-        verify="verification/nl/verify",
+        init="verification/pathcondition/init",
+        step="verification/pathcondition/step",
+        verify="verification/pathcondition/verify",
     )
     early_termination: bool = True
 
@@ -76,7 +76,7 @@ class NLVerificationConfig(BaseModel):
 class NLRequirementChecker:
     def __init__(
         self,
-        requirement: NLRequirement,
+        requirement: str,
         config: NLVerificationConfig = NLVerificationConfig(),
     ):
         self.client = AsyncOpenAI()
@@ -93,7 +93,7 @@ class NLRequirementChecker:
         self.updates = []
         self.verify_result = None
 
-    # @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
+    @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
     async def _completion(self, **kwargs) -> BaseModel:
         response = await self.client.beta.chat.completions.parse(**kwargs)
         return response.choices[0].message.parsed
@@ -101,7 +101,7 @@ class NLRequirementChecker:
     async def init(self, exec_path: ExecutionPath) -> None:
         msgs = self.prompt_templates["init"].render(
             exec_path=exec_path_to_str_compact(exec_path),
-            requirement=self.requirement.requirement,
+            requirement=self.requirement,
             early_termination=self.config.early_termination,
         )
         valid = False
@@ -169,7 +169,7 @@ class NLRequirementChecker:
 
     async def verify(self) -> VerificationResults:
         msgs = self.prompt_templates["verify"].render(
-            requirement=self.requirement.requirement,
+            requirement=self.requirement,
             instructions=self.instructions,
             updates=self.updates,
             success_condition=self.success_condition,
@@ -182,11 +182,11 @@ class NLRequirementChecker:
         return VerificationResults(
             satisfied=self.verify_result.satisfied,
             explanation=self.verify_result.explanation,
-            instructions=VerificationInstructions(
-                update=str(self.instructions),
-                early_termination=str(self.early_termination),
-            ),
             info=NLVerificationInfo(
+                instructions=VerificationInstructions(
+                    update=str(self.instructions),
+                    early_termination=str(self.early_termination),
+                ),
                 step_success_condition=str(self.success_condition),
                 step_update_instruction=str(self.instructions),
                 updates=self.updates,

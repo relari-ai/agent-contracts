@@ -8,7 +8,7 @@ class TraceInfo(BaseModel):
     trace_id: str
     project_name: Optional[str] = None
     run_id: Optional[str] = None
-    dataset_id: Optional[str] = None
+    specifications_id: Optional[str] = None
     scenario_id: Optional[str] = None
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
@@ -20,7 +20,7 @@ class TraceInfo(BaseModel):
 class RunIdInfo(BaseModel):
     run_id: str
     project_name: Optional[str] = None
-    dataset_id: Optional[str] = None
+    specifications_id: Optional[str] = None
     start_time: datetime
     end_time: datetime
 

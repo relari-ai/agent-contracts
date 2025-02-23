@@ -28,8 +28,8 @@ class TraceInfo(BaseModel):
     framework: Framework = Framework.UNKNOWN
     project_name: Optional[str] = None
     run_id: Optional[str] = None
-    dataset_id: Optional[str] = None
-    uuid: Optional[str] = None
+    specifications_id: Optional[str] = None
+    scenario_id: Optional[str] = None
     start_time: Optional[int] = None
     duration: Optional[int] = None
 
@@ -38,8 +38,8 @@ class TraceInfo(BaseModel):
         return (
             self.project_name is not None
             and self.run_id is not None
-            and self.uuid is not None
-            and self.dataset_id is not None
+            and self.scenario_id is not None
+            and self.specifications_id is not None
             and self.framework is not None
         )
 
@@ -103,17 +103,17 @@ class Trace:
         info = TraceInfo()
         # Find basic metadata
         for span in self._raw_trace:
-            info.project_name = get_attribute_value(
-                span["resource"]["attributes"],
+            info.project_name = info.project_name or get_attribute_value(
+                span['resource']['attributes'],
                 key=EvalAttributes.PROJECT_NAME,
             )
-            info.run_id = get_attribute_value(
+            info.run_id = info.run_id or get_attribute_value(
                 span["resource"]["attributes"], key=EvalAttributes.RUN_ID
             )
-            info.dataset_id = get_attribute_value(
-                span["attributes"], key=EvalAttributes.DATASET_ID
+            info.specifications_id = info.specifications_id or get_attribute_value(
+                span["attributes"], key=EvalAttributes.SPECIFICATIONS_ID
             )
-            info.uuid = get_attribute_value(
+            info.scenario_id = info.scenario_id or get_attribute_value(
                 span["attributes"], key=EvalAttributes.SCENARIO_ID
             )
             framework = Framework.from_name(
