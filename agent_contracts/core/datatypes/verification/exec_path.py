@@ -1,10 +1,13 @@
+from functools import cached_property
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
 from agent_contracts.core.datatypes.trace import Trace
+
 from .frameworks import parse_trace
+from .frameworks.conversation import parse_conversation
 
 
 class Action(BaseModel):
@@ -39,6 +42,7 @@ class State(BaseModel):
 class ExecutionPath(BaseModel):
     trace_id: str = Field(..., description="The trace ID")
     states: List[State]
+    output: Optional[Any] = Field(None, description="The output of the execution")
 
     def model_post_init(self, __context):
         # Verify no duplicate span IDs
@@ -47,6 +51,8 @@ class ExecutionPath(BaseModel):
         ]
         if not len(set(span_ids)) == len(span_ids):
             raise ValueError("Duplicate span IDs in execution fragment")
+        if not self.output:
+            self.output = self.states[-1].info["output"]
 
     def __repr__(self):
         """
@@ -123,3 +129,11 @@ class ExecutionPath(BaseModel):
         exec_path = cls(trace_id=trace.trace_id, states=states)
         exec_path.fill(trace)
         return exec_path
+    
+    @cached_property
+    def input(self):
+        return self.states[0].info["input"]
+
+    @cached_property
+    def conversation(self):
+        return parse_conversation(self)

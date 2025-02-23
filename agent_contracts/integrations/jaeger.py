@@ -59,15 +59,15 @@ class JaegerClient:
             trace_id = None
             start_time = None
             end_time = None
-            dataset_id = None
+            specifications_id = None
             scenario_id = None
             for scope in trace_data["scopeSpans"]:
                 if "spans" not in scope:
                     continue
                 for span in scope["spans"]:
                     trace_id = span["traceId"]
-                    dataset_id = get_attribute_value(
-                        span["attributes"], key=EvalAttributes.DATASET_ID
+                    specifications_id = get_attribute_value(
+                        span["attributes"], key=EvalAttributes.SPECIFICATIONS_ID
                     )
                     scenario_id = get_attribute_value(
                         span["attributes"], key=EvalAttributes.SCENARIO_ID
@@ -83,7 +83,7 @@ class JaegerClient:
                     trace_id=trace_id,
                     project_name=project_name,
                     run_id=run_id,
-                    dataset_id=dataset_id,
+                    specifications_id=specifications_id,
                     scenario_id=scenario_id,
                     start_time=start_time,
                     end_time=start_time,
@@ -157,14 +157,14 @@ class Jaeger:
         start: datetime,
         end: datetime,
         run_id: str = None,
-        dataset_id: str = None,
+        specifications_id: str = None,
         project_name: str = None,
     ):
         traces = await self.client.search(self.service, start, end)
         if run_id:
             traces = [trace for trace in traces if trace.run_id == run_id]
-        if dataset_id:
-            traces = [trace for trace in traces if trace.dataset_id == dataset_id]
+        if specifications_id:
+            traces = [trace for trace in traces if trace.specifications_id == specifications_id]
         if project_name:
             traces = [trace for trace in traces if trace.project_name == project_name]
         return traces
@@ -178,11 +178,13 @@ class Jaeger:
         aggregated = {}
         for trace in traces:
             run_id = trace.run_id
+            if not run_id:
+                continue
             if run_id not in aggregated:
                 aggregated[run_id] = {
                     "run_id": run_id,
                     "project_name": trace.project_name,
-                    "dataset_id": trace.dataset_id,
+                    "specifications_id": trace.specifications_id,
                     "start_time": trace.start_time,
                     "end_time": trace.end_time,
                 }

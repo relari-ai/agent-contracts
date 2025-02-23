@@ -9,19 +9,21 @@ from pydantic import BaseModel, Field, field_serializer
 from .contract import Contract
 from agent_contracts.core.utils.nanoid import nanoid
 
+
 class Scenario(BaseModel):
-    uuid: str
+    uuid: Optional[str] = None
     name: Optional[str] = None
     data: Any
     contracts: List[Contract] = Field(default_factory=list)
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
-    def __init__(self, data: Any, uuid: Optional[str] = None, **kwargs):
-        super().__init__(data=data, uuid=uuid or self.generate_uuid(data), **kwargs)
+    def model_post_init(self, __context: Any):
+        if not self.uuid:
+            self.uuid = f"con-{nanoid(8)}"
 
     @field_serializer("contracts")
     def serialize_contracts(self, contracts: List[Contract]):
-        return [contract.model_dump(exclude_defaults=True) for contract in contracts]
+        return [contract.model_dump() for contract in contracts]
 
     @staticmethod
     def generate_uuid(data: Any, name: Optional[str] = None):
@@ -40,9 +42,20 @@ class Scenario(BaseModel):
                 return contract
         raise KeyError(f"UUID {uuid} not found in scenario")
 
+    @classmethod
+    def model_validate(cls, obj: Any, **kwargs) -> "Scenario":
+        contracts = [Contract.model_validate(contract) for contract in obj["contracts"]]
+        return cls(
+            uuid=obj["uuid"],
+            name=obj["name"],
+            data=obj["data"],
+            contracts=contracts,
+            metadata=obj.get("metadata", {}),
+        )
 
-class Dataset(BaseModel):
-    uuid: str
+
+class Specifications(BaseModel):
+    uuid: Optional[str] = None
     scenarios: List[Scenario]
 
     def __init__(self, scenarios: List[Scenario], uuid: Optional[str] = None, **kwargs):
@@ -50,14 +63,16 @@ class Dataset(BaseModel):
             uuid = nanoid(8)
         super().__init__(scenarios=scenarios, uuid=uuid, **kwargs)
 
-    def __post_init__(self):
+    def model_post_init(self, __context: Any):
+        if not self.uuid:
+            self.uuid = f"con-{nanoid(8)}"
         uuids = {scenario.uuid for scenario in self.scenarios}
         if len(uuids) != len(self.scenarios):
             raise ValueError("Duplicate UUIDs found in dataset")
 
     @field_serializer("scenarios")
     def serialize_scenarios(self, scenarios: List[Scenario]):
-        return [scenario.model_dump(exclude_defaults=True) for scenario in scenarios]
+        return [scenario.model_dump() for scenario in scenarios]
 
     def __getitem__(self, uuid: str):
         for scenario in self.scenarios:
@@ -77,7 +92,7 @@ class Dataset(BaseModel):
 
     def __len__(self):
         return len(self.scenarios)
-    
+
     def __contains__(self, uuid: str):
         return any(scenario.uuid == uuid for scenario in self.scenarios)
 
@@ -85,7 +100,7 @@ class Dataset(BaseModel):
         path = Path(path)
         if path.suffix == ".json":
             with open(path, "w") as f:
-                json.dump(self.model_dump(exclude_defaults=True), f)
+                json.dump(self.model_dump(), f)
         else:
             raise ValueError(f"Unsupported file extension: {path.suffix}")
 
@@ -94,7 +109,9 @@ class Dataset(BaseModel):
         path = Path(path)
         if path.suffix == ".json":
             data = json.load(open(path, "r"))
-            scenarios = [Scenario(**scenario) for scenario in data["scenarios"]]
+            scenarios = [
+                Scenario.model_validate(scenario) for scenario in data["scenarios"]
+            ]
             return cls(scenarios=scenarios, uuid=data["uuid"])
         else:
             raise ValueError(f"Unsupported file extension: {path.suffix}")
