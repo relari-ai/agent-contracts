@@ -25,9 +25,9 @@ def should_include(node) -> bool:
     return node.name not in IGNORED_NODES
 
 
-def _item(span, actions=None):
+def _item(span, actions=None, span_id=None):
     obj = {
-        "spanId": span.span_id,
+        "spanId": span_id or span.span_id,
         "name": span.name,
         "info": span.attributes,
     }
@@ -51,7 +51,11 @@ def exec_path_from_trace(trace: Trace) -> List[Dict[str, Any]]:
     # Then find all actions for each state
     states = []
     for span in state_nodes:
+        state_span_id = span.span_id
         actions = [_item(leaf) for leaf in span.leaves if should_include(leaf)]
         if actions:
-            states.append(_item(span, actions))
+            if len(actions) == 1 and actions[0]["spanId"] == state_span_id:
+                states.append(_item(span, actions, span_id=state_span_id + "_single_node"))
+            else:
+                states.append(_item(span, actions))
     return states

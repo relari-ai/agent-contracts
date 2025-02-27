@@ -94,7 +94,11 @@ class ExecutionPath(BaseModel):
 
     def fill(self, trace: Trace):
         for state in self.states:
-            state_span = trace.get_span_by_id(state.span_id)
+            if state.span_id.endswith("_single_node"):
+                state_span_id = state.span_id[:-len("_single_node")]
+            else:
+                state_span_id = state.span_id
+            state_span = trace.get_span_by_id(state_span_id)
             state.info = state_span.attributes
             for action in state.actions:
                 action_span = trace.get_span_by_id(action.span_id)
