@@ -8,12 +8,33 @@ from agent_contracts.core.datatypes.specifications.contract import Contract
 from agent_contracts.core.datatypes.specifications.requirement import Requirement, Level
 from agent_contracts.core.datatypes.verification.exec_path import ExecutionPath
 from agent_contracts.core.verification.base import VerificationResults
+from enum import Flag, auto
 
 
 class ContractStatus(Enum):
     INVALID = None
     SATISFIED = True
     UNSATISFIED = False
+
+
+class Condition(Flag):
+    PRECONDITIONS = auto()
+    POSTCONDITIONS = auto()
+    PATHCONDITIONS = auto()
+
+    ALL = PRECONDITIONS | POSTCONDITIONS | PATHCONDITIONS
+
+    @classmethod
+    def from_string(cls, s: str) -> "Condition":
+        if s == "precondition":
+            return cls.PRECONDITIONS
+        elif s == "postcondition":
+            return cls.POSTCONDITIONS
+        elif s == "pathcondition":
+            return cls.PATHCONDITIONS
+
+    def matches(self, req: Requirement) -> bool:
+        return self.from_string(req.type) in self
 
 
 @dataclass
@@ -58,10 +79,16 @@ class ContractChecker:
         return ContractStatus.SATISFIED
 
     async def check(
-        self, trace: ExecutionPath, contract: Contract, progress: bool = True
+        self,
+        trace: ExecutionPath,
+        contract: Contract,
+        progress: bool = True,
+        filter: Condition = Condition.ALL,
     ) -> ContractVerificationResults:
         group = [
-            req.check(self.prepare_requirement_input(req, trace)) for req in contract
+            req.check(self.prepare_requirement_input(req, trace))
+            for req in contract
+            if filter.matches(req)
         ]
         check_results = await tqdm.gather(
             *group, desc=f"Contract {contract.name}", disable=not progress
