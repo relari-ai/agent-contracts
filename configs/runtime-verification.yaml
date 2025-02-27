@@ -1,0 +1,7 @@
+debug: true
+specifications: ".local/fin-agent-runtime-022725.json"
+kafka:
+  broker: "localhost:9094"
+rabbitmq:
+  username: "certifier"
+  password: "relari"

@@ -4,6 +4,9 @@ receivers:
       http:
         endpoint: 0.0.0.0:4318
 processors:
+  batch:
+    timeout: 10s
+    send_batch_size: 1024
 extensions:
   health_check: {}
 exporters:
@@ -11,10 +14,11 @@ exporters:
     endpoint: jaeger:4317
     tls:
       insecure: true
-  prometheus:
-    endpoint: "0.0.0.0:9090"
+    
 service:
+  extensions: [health_check]
   pipelines:
     traces:
       receivers: [otlp]
+      processors: [batch]
       exporters: [otlp]
