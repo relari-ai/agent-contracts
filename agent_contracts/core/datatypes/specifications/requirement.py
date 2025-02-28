@@ -20,8 +20,8 @@ class RequirementRegistry:
 
     @classmethod
     def register(cls, subclass: type) -> None:
-        cname = subclass.__name__
-        if cname in {"BasePrecondition", "BasePathcondition", "BasePostcondition"}:
+        cname = subclass.__name__.lower()
+        if cname in {"baseprecondition", "basepathcondition", "basepostcondition"}:
             # Do not register the base classes
             return
         if cname in cls._registry:
@@ -30,9 +30,10 @@ class RequirementRegistry:
 
     @classmethod
     def get(cls, req_type: str) -> type:
-        if req_type not in cls._registry:
+        rq = req_type.lower()
+        if rq not in cls._registry:
             raise ValueError(f"Requirement {req_type} not registered")
-        return cls._registry[req_type]
+        return cls._registry[rq]
 
 
 class _RequirementInterface(BaseModel, ABC):
@@ -49,13 +50,12 @@ class _RequirementInterface(BaseModel, ABC):
 
     def to_dict(self) -> dict:
         data = self.model_dump()
-        data["__class__"] = self.__class__.__name__
-        return data
+        return {"name": data.pop("name"), "type": self.__class__.__name__, **data}
 
     @classmethod
     def from_dict(cls, data: dict) -> "_RequirementInterface":
         data = dict(data)
-        data.pop("__class__", None)
+        data.pop("type", None)
         return cls.model_validate(data)
 
     @field_serializer("level")

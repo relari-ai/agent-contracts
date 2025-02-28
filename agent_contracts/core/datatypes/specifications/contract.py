@@ -16,7 +16,7 @@ def _serialize_requirements(reqs: List[Requirement], **kwargs) -> List[dict]:
 def _deserialize_requirements(data: List[dict]) -> List[Requirement]:
     result = []
     for item in data:
-        req_type = item.get("__class__")
+        req_type = item.get("type")
         cx = RequirementRegistry.get(req_type)
         result.append(cx.model_validate(item))
     return result
