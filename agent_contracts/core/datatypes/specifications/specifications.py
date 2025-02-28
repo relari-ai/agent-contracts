@@ -104,26 +104,8 @@ class Specifications(BaseModel):
             with open(path, "w") as f:
                 json.dump(dump, f)
         elif path.suffix == ".yaml":
-
-            def requirement_representer(dumper, data):
-                # Extract the data without the __class__ field
-                dict_repr = data.copy()
-                class_name = dict_repr.pop("__class__")
-                # Use a standard YAML tag with the class name
-                return dumper.represent_mapping(f"!{class_name}", dict_repr)
-
-            # Register custom representer for dictionaries with __class__ field
-            yaml.add_representer(
-                dict,
-                lambda dumper, data: (
-                    requirement_representer(dumper, data)
-                    if "__class__" in data
-                    else dumper.represent_mapping("tag:yaml.org,2002:map", data)
-                ),
-            )
-
             with open(path, "w") as f:
-                yaml.dump(dump, f, default_flow_style=False)
+                yaml.dump(dump, f, default_flow_style=False, sort_keys=False)
         else:
             raise ValueError(f"Unsupported file extension: {path.suffix}")
 
@@ -137,26 +119,7 @@ class Specifications(BaseModel):
             ]
             return cls(scenarios=scenarios, uuid=data["uuid"])
         elif path.suffix == ".yaml":
-            # Register constructors for requirement types
-            def requirement_constructor(loader, tag_suffix, node):
-                # Get the tag name (class name)
-                class_name = tag_suffix
-                # Load the mapping
-                value = loader.construct_mapping(node)
-                # Add the __class__ field
-                value["__class__"] = class_name
-                return value
-
-            # Register the constructor for all requirement types
-            
-
-            yaml_loader = yaml.SafeLoader
-            # Create a custom multi-constructor that handles all !RequirementType tags
-            yaml.add_multi_constructor("!", requirement_constructor, Loader=yaml_loader)
-            # Load the YAML data
-            with open(path, "r") as f:
-                data = yaml.load(f, Loader=yaml_loader)
-            # Create the Specifications object
+            data = yaml.safe_load(open(path, "r"))
             scenarios = [
                 Scenario.model_validate(scenario) for scenario in data["scenarios"]
             ]
