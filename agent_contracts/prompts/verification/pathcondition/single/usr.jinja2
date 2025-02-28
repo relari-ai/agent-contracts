@@ -1,0 +1,17 @@
+## Requirement
+{{ requirement }}
+
+## Action
+{% for state in exec_path.states %}
+## State name: **{{ state.name }}**
+{% for action in state.actions %}
+**Action name: `{{ action.name }}`**
+```json
+{% if action["info"]["llm"] %}
+{{ action["info"]["llm"]["output_messages"] | tojson() }}
+{% else %}
+{{ action["info"]["output"] | tojson() }}
+{% endif %}
+```
+{% endfor %}
+{% endfor %}
