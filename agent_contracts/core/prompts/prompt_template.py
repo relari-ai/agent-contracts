@@ -1,7 +1,7 @@
 from pathlib import Path
-from typing import Optional, Set
+from typing import Optional
 
-from jinja2 import FileSystemLoader, BaseLoader, Environment, Template, meta
+from jinja2 import BaseLoader, Environment, FileSystemLoader, meta
 
 
 class PromptTemplate:
@@ -61,7 +61,6 @@ class PromptTemplate:
         user_prompt_path: Path,
         system_prompt_path: Optional[Path] = None,
     ):
-
         # Create a set of directories to search for templates.
         search_dirs = {str(user_prompt_path.parent)}
         if system_prompt_path is not None:

@@ -1,0 +1,66 @@
+service:
+  extensions: [jaeger_storage, jaeger_query, healthcheckv2]
+  pipelines:
+    traces:
+      receivers: [otlp, jaeger]
+      exporters: [jaeger_storage_exporter]
+  telemetry:
+    resource:
+      service.name: jaeger
+    metrics:
+      level: detailed
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: 0.0.0.0
+                port: 8888
+
+extensions:
+  healthcheckv2:
+    use_v2: true
+    http:
+
+  jaeger_query:
+    storage:
+      traces: some_store
+      traces_archive: another_store
+    ui:
+      config_file: /jaeger/config-ui.json
+
+  jaeger_storage:
+    backends:
+      some_store:
+        badger:
+          directories:
+            keys: "/tmp/jaeger/"
+            values: "/tmp/jaeger/"
+          ephemeral: false
+      another_store:
+        badger:
+          directories:
+            keys: "/tmp/jaeger_archive/"
+            values: "/tmp/jaeger_archive/"
+          ephemeral: false
+      
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+  jaeger:
+    protocols:
+      grpc:
+      thrift_binary:
+      thrift_compact:
+      thrift_http:
+
+# processors:
+#   batch:
+
+exporters:
+  jaeger_storage_exporter:
+    trace_storage: some_store

@@ -7,6 +7,10 @@ from loguru import logger
 from agent_contracts.certification.config import RuntimeVerificationConfig
 from agent_contracts.certification.proto import parse_span
 from agent_contracts.certification.workers import certify_span
+from agent_contracts.core.datatypes.trace.semcov import (
+    RELARI_TRACER,
+    ResourceAttributes,
+)
 from agent_contracts.core.utils.trace_attributes import get_attribute_value
 
 
@@ -14,7 +18,7 @@ def preprocess(span_data: dict):
     spans_by_trace_id = defaultdict(list)
     for resource in span_data["resourceSpans"]:
         x = get_attribute_value(resource["resource"], "service.name")
-        if x != "relari-otel":
+        if x != RELARI_TRACER:
             continue
         for scope in resource["scopeSpans"]:
             for span in scope["spans"]:
@@ -38,7 +42,22 @@ def main():
                 logger.info(f"Received msg, type: {format_type}")
                 spans_by_trace_id = preprocess(span_data)
                 for trace_id, spans in spans_by_trace_id.items():
-                    asyncio.run(certify_span(trace_id, spans))
+                    certification_enabled = any(
+                        [
+                            get_attribute_value(
+                                span["resource"],
+                                ResourceAttributes.CERTIFICATION_ENABLED,
+                            )
+                            for span in spans
+                        ]
+                    )
+                    if certification_enabled:
+                        if RuntimeVerificationConfig.debug:
+                            asyncio.run(certify_span(trace_id, spans))
+                        else:
+                            certify_span.send(trace_id, spans)
+                    else:
+                        logger.info(f"[{trace_id}] Certification disabled, skipping...")
     except KeyboardInterrupt:
         logger.info("Quitting...")
     finally:

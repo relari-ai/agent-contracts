@@ -5,7 +5,12 @@ from google.protobuf.json_format import MessageToDict
 from loguru import logger
 from opentelemetry.proto.logs.v1.logs_pb2 import LogsData
 from opentelemetry.proto.metrics.v1.metrics_pb2 import MetricsData
-from opentelemetry.proto.trace.v1.trace_pb2 import TracesData, ResourceSpans, ScopeSpans, Span
+from opentelemetry.proto.trace.v1.trace_pb2 import (
+    ResourceSpans,
+    ScopeSpans,
+    Span,
+    TracesData,
+)
 
 
 def _parse_otlp_proto(raw_data):
@@ -23,25 +28,36 @@ def _parse_otlp_proto(raw_data):
         resource_spans = ResourceSpans()
         resource_spans.ParseFromString(raw_data)
         # Wrap in the structure expected by the consumer
-        return {"type": "resource_spans", "data": {"resourceSpans": [MessageToDict(resource_spans)]}}
+        return {
+            "type": "resource_spans",
+            "data": {"resourceSpans": [MessageToDict(resource_spans)]},
+        }
     except Exception:
         pass
-        
+
     # Try as ScopeSpans
     try:
         scope_spans = ScopeSpans()
         scope_spans.ParseFromString(raw_data)
         # Wrap in the structure expected by the consumer
-        return {"type": "scope_spans", "data": {"resourceSpans": [{"scopeSpans": [MessageToDict(scope_spans)]}]}}
+        return {
+            "type": "scope_spans",
+            "data": {"resourceSpans": [{"scopeSpans": [MessageToDict(scope_spans)]}]},
+        }
     except Exception:
         pass
-        
+
     # Try as individual Span
     try:
         span = Span()
         span.ParseFromString(raw_data)
         # Wrap in the structure expected by the consumer
-        return {"type": "span", "data": {"resourceSpans": [{"scopeSpans": [{"spans": [MessageToDict(span)]}]}]}}
+        return {
+            "type": "span",
+            "data": {
+                "resourceSpans": [{"scopeSpans": [{"spans": [MessageToDict(span)]}]}]
+            },
+        }
     except Exception:
         pass
 
@@ -68,14 +84,14 @@ def parse_span(msg):
     """Parse a span from a message"""
     if msg is None:
         return None, None
-        
+
     if msg.error():
         if msg.error().code() == KafkaError._PARTITION_EOF:
             logger.info("Reached end of partition")
         else:
             logger.error(f"Error: {msg.error()}")
         return None, None
-        
+
     raw_data = msg.value()
     span_data = None
     format_type = "unknown"
@@ -90,8 +106,8 @@ def parse_span(msg):
             result = _parse_otlp_proto(raw_data)
             span_data = result["data"]
             format_type = f"otlp_{result['type']}"
-        except Exception as e:
+        except Exception:
             # logger.error(f"Failed to parse message: {str(e)}")
             return None, None
-            
+
     return span_data, format_type

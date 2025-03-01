@@ -1,7 +1,11 @@
-debug: true
+debug: false
 specifications: ".local/fin-agent-runtime-022725.json"
 kafka:
   broker: "localhost:9094"
 rabbitmq:
   username: "certifier"
+  password: "relari"
+redis:
+  host: "localhost"
+  port: 6379
   password: "relari"

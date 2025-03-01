@@ -1,14 +1,13 @@
 from dataclasses import dataclass
-from enum import Enum
+from enum import Enum, Flag, auto
 from typing import Dict, List
 
 from tqdm.asyncio import tqdm
 
 from agent_contracts.core.datatypes.specifications.contract import Contract
-from agent_contracts.core.datatypes.specifications.requirement import Requirement, Level
+from agent_contracts.core.datatypes.specifications.requirement import Level, Requirement
 from agent_contracts.core.datatypes.verification.exec_path import ExecutionPath
 from agent_contracts.core.verification.base import VerificationResults
-from enum import Flag, auto
 
 
 class ContractStatus(Enum):

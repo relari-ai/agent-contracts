@@ -1,17 +1,19 @@
+from random import choices
+from string import hexdigits
 from typing import Any, Dict, List, Optional
 
 from anytree import PreOrderIter, RenderTree
 from anytree.exporter import DictExporter
 from pydantic import BaseModel
 
-from agent_contracts.core.utils.trace_attributes import get_attribute_value
 from agent_contracts.core.datatypes.trace.semcov import (
     EvalAttributes,
     OpeninferenceInstrumentators,
+    ResourceAttributes,
 )
+from agent_contracts.core.utils.trace_attributes import get_attribute_value
+
 from .common import Framework, Span
-from random import choices
-from string import hexdigits
 
 
 class TraceExporter(DictExporter):
@@ -104,11 +106,11 @@ class Trace:
         # Find basic metadata
         for span in self._raw_trace:
             info.project_name = info.project_name or get_attribute_value(
-                span['resource']['attributes'],
-                key=EvalAttributes.PROJECT_NAME,
+                span["resource"]["attributes"],
+                key=ResourceAttributes.PROJECT_NAME,
             )
             info.run_id = info.run_id or get_attribute_value(
-                span["resource"]["attributes"], key=EvalAttributes.RUN_ID
+                span["resource"]["attributes"], key=ResourceAttributes.RUN_ID
             )
             info.specifications_id = info.specifications_id or get_attribute_value(
                 span["attributes"], key=EvalAttributes.SPECIFICATIONS_ID

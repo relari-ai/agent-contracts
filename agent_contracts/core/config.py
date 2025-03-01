@@ -8,9 +8,9 @@ from pydantic import BaseModel
 from agent_contracts.core.verification.configs import (
     NLVerificationConfig,
     PathconditionConfig,
+    PostconditionConfig,
+    PreconditionConfig,
 )
-from agent_contracts.core.verification.configs import PostconditionConfig
-from agent_contracts.core.verification.configs import PreconditionConfig
 
 
 class Pathconditions(BaseModel):

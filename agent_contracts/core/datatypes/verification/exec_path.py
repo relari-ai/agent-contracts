@@ -52,7 +52,10 @@ class ExecutionPath(BaseModel):
         if not len(set(span_ids)) == len(span_ids):
             raise ValueError("Duplicate span IDs in execution fragment")
         if not self.output:
-            self.output = self.states[-1].info["output"]
+            try:
+                self.output = self.states[-1].info["output"]
+            except Exception:
+                self.output = "Not Available"
 
     def __repr__(self):
         """
@@ -95,7 +98,7 @@ class ExecutionPath(BaseModel):
     def fill(self, trace: Trace):
         for state in self.states:
             if state.span_id.endswith("_single_node"):
-                state_span_id = state.span_id[:-len("_single_node")]
+                state_span_id = state.span_id[: -len("_single_node")]
             else:
                 state_span_id = state.span_id
             state_span = trace.get_span_by_id(state_span_id)
@@ -133,10 +136,13 @@ class ExecutionPath(BaseModel):
         exec_path = cls(trace_id=trace.trace_id, states=states)
         exec_path.fill(trace)
         return exec_path
-    
+
     @cached_property
     def input(self):
-        return self.states[0].info["input"]
+        try:
+            return self.states[0].info["input"]
+        except Exception:
+            return "Not Available"
 
     @cached_property
     def conversation(self):

@@ -70,3 +70,6 @@ cython_debug/
 
 # Other
 .DS_Store
+.local/
+
+test_utils/kafka_recordings/*

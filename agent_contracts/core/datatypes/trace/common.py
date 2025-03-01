@@ -1,12 +1,15 @@
 from enum import Enum
 from typing import Optional
+
 from anytree.node.nodemixin import NodeMixin
 from openinference.semconv.trace import SpanAttributes
+
+from agent_contracts.core.datatypes.trace.semcov import EvalAttributes
 from agent_contracts.core.utils.trace_attributes import (
     get_attribute_value,
     recreate_attributes_hierarchy,
 )
-from agent_contracts.core.datatypes.trace.semcov import EvalAttributes
+
 
 class Framework(Enum):
     CREWAI = "crewai"

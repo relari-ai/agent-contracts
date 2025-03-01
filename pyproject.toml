@@ -27,7 +27,7 @@ confluent-kafka = "^2.8.0"
 jaeger-client = "^4.8.0"
 opentelemetry-proto = "^1.30.0"
 pyyaml = "^6.0.2"
-dramatiq = {extras = ["rabbitmq", "watch"], version = "^1.17.1"}
+dramatiq = {extras = ["redis", "watch"], version = "^1.17.1"}
 
 
 [tool.poetry.group.dev.dependencies]
@@ -43,7 +43,7 @@ cli = "agent_contracts.__main__:cli"
 tui = "agent_contracts.tui.tui:main"
 
 [tool.ruff]
-ignore = ["E501"] # Avoid enforcing line-length violations (`E501`)
+lint.ignore = ["E501"] # Avoid enforcing line-length violations (`E501`)
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["E402"]

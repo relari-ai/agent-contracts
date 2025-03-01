@@ -17,6 +17,17 @@ class RabbitMQSettings(BaseModel):
         return f"amqp://{self.username}:{self.password}@{self.host}:{self.port}"
 
 
+class RedisSettings(BaseModel):
+    host: str = "localhost"
+    port: int = 6379
+    db: int = 0
+    password: str = None
+
+    @property
+    def url(self):
+        return f"redis://{self.host}:{self.port}/{self.db}"
+
+
 class KafkaSettings(BaseModel):
     broker: str = "localhost:9094"
     group_id: str = "jaeger-consumer-group"
@@ -45,16 +56,22 @@ class Settings(BaseModel):
     debug: bool = False
     specifications: str
     kafka: KafkaSettings
-    rabbitmq: RabbitMQSettings
+    # rabbitmq: RabbitMQSettings
+    redis: RedisSettings
+    ttl: int = 60 * 10  # 10 minutes
+    key: str = "certificates"
 
     @classmethod
     def from_yaml(cls, file_path: str) -> "Settings":
-        logger.info(f"Loading config from {file_path}")
+        logger.info(f"Loading runtime verification config from {file_path}")
         with Path(file_path).open() as f:
             config_data = yaml.safe_load(f)
         return cls(**config_data)
 
 
-RuntimeVerificationConfig = Settings.from_yaml(
-    getenv("RUNTIME_VERIFICATION_CONFIG", "configs/runtime-verification.yaml")
-)
+__RUNTIME_VERIFICATION_CONFIG = getenv("RUNTIME_VERIFICATION_CONFIG", None)
+if not __RUNTIME_VERIFICATION_CONFIG:
+    raise RuntimeError(
+        "Runtime Verification Config is not set, set the environment variable RUNTIME_VERIFICATION_CONFIG"
+    )
+RuntimeVerificationConfig = Settings.from_yaml(__RUNTIME_VERIFICATION_CONFIG)
