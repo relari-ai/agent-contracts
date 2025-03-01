@@ -2,6 +2,7 @@ from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
+from agent_contracts.core.config import VerificationConfig
 from agent_contracts.core.datatypes.specifications.requirement import (
     BasePostcondition,
 )
@@ -16,7 +17,8 @@ class _VerifyResult(BaseModel):
 
 @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
 async def _completion(client: AsyncOpenAI, **kwargs) -> BaseModel:
-    response = await client.beta.chat.completions.parse(**kwargs)
+    args = VerificationConfig.postconditions.simple.model_params(**kwargs)
+    response = await client.beta.chat.completions.parse(**args)
     return response.choices[0].message.parsed
 
 
@@ -34,13 +36,12 @@ class Postcondition(BasePostcondition):
 
     async def check(self, output: dict) -> VerificationResults:
         client = AsyncOpenAI()
-        prompt = PromptProvider.get_prompt(f"verification/postcondition/{self.on}")
+        prompt = PromptProvider.get_prompt(
+            VerificationConfig.postconditions.simple.prompt[self.on]
+        )
         msgs = prompt.render(requirement=self.requirement, system_output=output)
         result = await _completion(
-            client=client,
-            model="gpt-4o-mini",
-            messages=msgs,
-            response_format=_VerifyResult,
+            client=client, messages=msgs, response_format=_VerifyResult
         )
         return VerificationResults(
             satisfied=result.satisfied, explanation=result.explanation

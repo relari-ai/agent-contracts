@@ -6,6 +6,7 @@ from openai import AsyncOpenAI
 from pydantic import BaseModel
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
+from agent_contracts.core.config import VerificationConfig
 from agent_contracts.core.datatypes.verification.exec_path import (
     Action,
     ExecutionPath,
@@ -55,37 +56,18 @@ class NLVerificationInfo(BaseModel):
     step_update_instruction: str
 
 
-class StepConfig(BaseModel):
-    init: str
-    step: str
-    verify: str
-
-
-class NLVerificationConfig(BaseModel):
-    models: StepConfig = StepConfig(
-        init="o3-mini", step="gpt-4o-mini", verify="o3-mini"
-    )
-    prompts: StepConfig = StepConfig(
-        init="verification/pathcondition/init",
-        step="verification/pathcondition/step",
-        verify="verification/pathcondition/verify",
-    )
-    early_termination: bool = True
-
-
 class NLRequirementChecker:
     def __init__(
         self,
         requirement: str,
-        config: NLVerificationConfig = NLVerificationConfig(),
     ):
         self.client = AsyncOpenAI()
-        self.config = config
+        self.config = VerificationConfig.pathconditions.multi_stage
         self.requirement = requirement
         self.prompt_templates = {
-            "init": PromptProvider.get_prompt(config.prompts.init),
-            "step": PromptProvider.get_prompt(config.prompts.step),
-            "verify": PromptProvider.get_prompt(config.prompts.verify),
+            "init": PromptProvider.get_prompt(self.config.prompts.init),
+            "step": PromptProvider.get_prompt(self.config.prompts.step),
+            "verify": PromptProvider.get_prompt(self.config.prompts.verify),
         }
         self.schema = None
         self.instructions = None

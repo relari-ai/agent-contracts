@@ -1,64 +1,48 @@
+from os import getenv
 from pathlib import Path
-from typing import Any, Literal
 
-from pydantic import (
-    PostgresDsn,
-    computed_field,
+import yaml
+from loguru import logger
+from pydantic import BaseModel
+
+from agent_contracts.core.verification.configs import (
+    NLVerificationConfig,
+    PathconditionConfig,
 )
-from pydantic_core import MultiHostUrl
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from agent_contracts.core.verification.configs import PostconditionConfig
+from agent_contracts.core.verification.configs import PreconditionConfig
 
 
-def parse_cors(v: Any) -> list[str] | str:
-    if isinstance(v, str) and not v.startswith("["):
-        return [i.strip() for i in v.split(",")]
-    elif isinstance(v, list | str):
-        return v
-    raise ValueError(v)
+class Pathconditions(BaseModel):
+    multi_stage: NLVerificationConfig = NLVerificationConfig()
+    simple: PathconditionConfig = PathconditionConfig()
 
 
-class Settings(BaseSettings):
-    model_config = SettingsConfigDict(
-        # Use top level .env file (one level above ./backend/)
-        env_file="../.env",
-        env_ignore_empty=True,
-        extra="ignore",
-    )
-    ENVIRONMENT: Literal["local", "staging", "production"] = "local"
-
-    # Storage
-    LOCAL_STORAGE_PATH: Path
-
-    # Tempo
-    TEMPO_URI: str
-
-    # API
-    API_V1_STR: str = "/api/v1"
-
-    # THIRD-PARTY
-    OPENAI_API_KEY: str
-
-    # Postgres
-    POSTGRES_SERVER: str
-    POSTGRES_PORT: int = 5432
-    POSTGRES_USER: str
-    POSTGRES_PASSWORD: str = ""
-    POSTGRES_DB: str = ""
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def SQLALCHEMY_DATABASE_URI(self) -> PostgresDsn:
-        return MultiHostUrl.build(
-            scheme="postgresql+psycopg",
-            username=self.POSTGRES_USER,
-            password=self.POSTGRES_PASSWORD,
-            host=self.POSTGRES_SERVER,
-            port=self.POSTGRES_PORT,
-            path=self.POSTGRES_DB,
-        )
-
-    def model_post_init(self, __context: Any) -> None:
-        self.LOCAL_STORAGE_PATH.mkdir(parents=True, exist_ok=True)
+class Preconditions(BaseModel):
+    simple: PreconditionConfig = PreconditionConfig()
 
 
-settings = Settings()  # type: ignore
+class Postconditions(BaseModel):
+    simple: PostconditionConfig = PostconditionConfig()
+
+
+class Settings(BaseModel):
+    verbose: bool = False
+    pathconditions: Pathconditions = Pathconditions()
+    preconditions: Preconditions = Preconditions()
+    postconditions: Postconditions = Postconditions()
+
+    @classmethod
+    def from_yaml(cls, file_path: str) -> "Settings":
+        logger.info(f"Loading config from {file_path}")
+        with Path(file_path).open() as f:
+            config_data = yaml.safe_load(f)
+        return cls(**config_data)
+
+
+__VERIFICATION_CONFIG_FILE = getenv("VERIFICATION_CONFIG", None)
+VerificationConfig = (
+    Settings.from_yaml(__VERIFICATION_CONFIG_FILE)
+    if __VERIFICATION_CONFIG_FILE
+    else Settings()
+)
