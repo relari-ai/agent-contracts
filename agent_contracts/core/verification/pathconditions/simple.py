@@ -2,15 +2,13 @@ from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
-from agent_contracts.core.prompts.provider import PromptProvider
-from agent_contracts.core.verification.base import VerificationResults
-
-
+from agent_contracts.core.config import VerificationConfig
 from agent_contracts.core.datatypes.specifications.requirement import (
     BasePathcondition,
 )
 from agent_contracts.core.datatypes.verification import ExecutionPath
-from agent_contracts.core.config import VerificationConfig
+from agent_contracts.core.prompts.provider import PromptProvider
+from agent_contracts.core.verification.base import VerificationResults
 
 
 class _VerifyResult(BaseModel):

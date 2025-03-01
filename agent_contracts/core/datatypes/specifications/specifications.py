@@ -11,6 +11,7 @@ from agent_contracts.core.utils.nanoid import nanoid
 
 from .contract import Contract
 
+
 class Scenario(BaseModel):
     uuid: Optional[str] = None
     name: Optional[str] = None

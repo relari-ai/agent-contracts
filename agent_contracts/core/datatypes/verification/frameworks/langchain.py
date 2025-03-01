@@ -55,7 +55,9 @@ def exec_path_from_trace(trace: Trace) -> List[Dict[str, Any]]:
         actions = [_item(leaf) for leaf in span.leaves if should_include(leaf)]
         if actions:
             if len(actions) == 1 and actions[0]["spanId"] == state_span_id:
-                states.append(_item(span, actions, span_id=state_span_id + "_single_node"))
+                states.append(
+                    _item(span, actions, span_id=state_span_id + "_single_node")
+                )
             else:
                 states.append(_item(span, actions))
     return states

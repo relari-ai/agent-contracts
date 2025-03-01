@@ -1,5 +1,6 @@
 from enum import Enum
 from pathlib import Path
+
 from .prompt_template import PromptTemplate
 
 _DEFAULT_PROMPT_PATH = Path(__file__).parent.parent.parent / "prompts"

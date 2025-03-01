@@ -42,7 +42,9 @@ class _RequirementInterface(BaseModel, ABC):
         description="Unique identifier for the requirement",
     )
     name: str = Field(..., description="Name of the requirement")
-    level: Level = Field(default=Level.MUST, description="Level of the requirement (MUST, SHOULD)")
+    level: Level = Field(
+        default=Level.MUST, description="Level of the requirement (MUST, SHOULD)"
+    )
 
     def __init_subclass__(cls, **kwargs):
         RequirementRegistry.register(cls)
@@ -86,6 +88,7 @@ class BasePathcondition(_RequirementInterface):
     @property
     def type(self) -> Literal["pathcondition"]:
         return "pathcondition"
+
 
 class BasePostcondition(_RequirementInterface):
     on: Literal["output", "conversation"] = Field(

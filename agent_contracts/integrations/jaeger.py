@@ -3,8 +3,15 @@ from datetime import datetime, timezone
 import aiohttp
 
 from agent_contracts.core.datatypes.trace import Trace
-from agent_contracts.core.datatypes.trace.semcov import EvalAttributes
-from agent_contracts.core.utils.trace_attributes import get_attribute_value, unix_nano_to_datetime
+from agent_contracts.core.datatypes.trace.semcov import (
+    RELARI_TRACER,
+    EvalAttributes,
+    ResourceAttributes,
+)
+from agent_contracts.core.utils.trace_attributes import (
+    get_attribute_value,
+    unix_nano_to_datetime,
+)
 
 from .base import RunIdInfo, TraceInfo
 
@@ -51,10 +58,11 @@ class JaegerClient:
         trace_infos = []
         for trace_data in traces:
             run_id = get_attribute_value(
-                trace_data["resource"]["attributes"], key=EvalAttributes.RUN_ID
+                trace_data["resource"]["attributes"], key=ResourceAttributes.RUN_ID
             )
             project_name = get_attribute_value(
-                trace_data["resource"]["attributes"], key=EvalAttributes.PROJECT_NAME
+                trace_data["resource"]["attributes"],
+                key=ResourceAttributes.PROJECT_NAME,
             )
             trace_id = None
             start_time = None
@@ -146,7 +154,7 @@ class Jaeger:
     def __init__(
         self,
         base_url: str = "http://localhost:16686",
-        service: str = "relari-otel",
+        service: str = RELARI_TRACER,
         timeout: int = 10,
     ):
         self.client = JaegerClient(base_url, timeout)
@@ -164,7 +172,11 @@ class Jaeger:
         if run_id:
             traces = [trace for trace in traces if trace.run_id == run_id]
         if specifications_id:
-            traces = [trace for trace in traces if trace.specifications_id == specifications_id]
+            traces = [
+                trace
+                for trace in traces
+                if trace.specifications_id == specifications_id
+            ]
         if project_name:
             traces = [trace for trace in traces if trace.project_name == project_name]
         return traces
