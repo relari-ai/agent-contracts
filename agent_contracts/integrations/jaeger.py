@@ -74,10 +74,10 @@ class JaegerClient:
                     continue
                 for span in scope["spans"]:
                     trace_id = span["traceId"]
-                    specifications_id = get_attribute_value(
+                    specifications_id = specifications_id or get_attribute_value(
                         span["attributes"], key=EvalAttributes.SPECIFICATIONS_ID
                     )
-                    scenario_id = get_attribute_value(
+                    scenario_id = scenario_id or get_attribute_value(
                         span["attributes"], key=EvalAttributes.SCENARIO_ID
                     )
                     _start_time = unix_nano_to_datetime(span["startTimeUnixNano"])
@@ -187,6 +187,8 @@ class Jaeger:
 
     async def run_ids(self, start: datetime, end: datetime):
         traces = await self.search(start, end)
+        if traces == {'resourceSpans': []}:
+            return []
         aggregated = {}
         for trace in traces:
             run_id = trace.run_id

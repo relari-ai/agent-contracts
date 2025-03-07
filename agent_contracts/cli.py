@@ -9,12 +9,19 @@ from rich.console import Console
 from rich.rule import Rule
 from rich.table import Table
 
-from agent_contracts.core.datatypes.dataset.contract import Contract
-from agent_contracts.core.datatypes.dataset.dataset import Dataset
+from agent_contracts.core.datatypes.specifications import Contract, Specifications
 from agent_contracts.core.datatypes.trace import Trace
 from agent_contracts.core.datatypes.verification.exec_path import ExecutionPath
 from agent_contracts.core.verification.contract_checker import ContractChecker
 from agent_contracts.integrations.jaeger import Jaeger
+
+
+async def _verify_contract(
+    checker: ContractChecker, exec_path: ExecutionPath, contract: Contract
+):
+    result = await checker.check(exec_path, contract)
+    return contract.uuid, result
+
 
 
 class CLIAdapter:
@@ -58,17 +65,21 @@ class CLIAdapter:
         return start, end
 
     async def _verify_single_trace(
-        self, trace: Trace, dataset: Dataset, checker: ContractChecker
+        self, trace: Trace, specifications: Specifications, checker: ContractChecker
     ):
-        async def _verify_contract(exec_path: ExecutionPath, contract: Contract):
+        async def _verify_contract(
+            checker: ContractChecker, exec_path: ExecutionPath, contract: Contract
+        ):
             result = await checker.check(exec_path, contract)
             return contract.uuid, result
 
         exec_path = ExecutionPath.from_trace(trace)
         try:
-            scenario = dataset[trace.info.uuid]
+            scenario = specifications[trace.info.scenario_id]
         except KeyError:
-            raise RuntimeError(f"Scenario {trace.info.uuid} not found in dataset")
+            raise RuntimeError(
+                f"Scenario {trace.info.scenario_id} not found in specifications"
+            )
         group = [
             _verify_contract(exec_path, contract) for contract in scenario.contracts
         ]
@@ -77,98 +88,128 @@ class CLIAdapter:
         return results
 
     async def verify_trace(
-        self, trace_id: str, dataset_path: Path, output: Optional[Path] = None
+        self, trace_id: str, specifications_path: Path, output: Optional[Path] = None
     ):
-        """Verify a trace with the given TRACE_ID and DATASET_PATH."""
-        click.echo(f"Verifying trace {trace_id} with dataset at {dataset_path}")
-        dataset = Dataset.load(dataset_path)
+        """Verify a trace with the given TRACE_ID and SPECIFICATIONS_PATH."""
+        click.echo(
+            f"Verifying trace {trace_id} with specifications at {specifications_path}"
+        )
+        try:
+            specification = Specifications.load(specifications_path)
+        except Exception:
+            click.echo(f"Error loading specifications from {specifications_path}")
+            raise click.Abort()
         trace = await self.client.trace(trace_id)
-        if trace.info.dataset_id != dataset.uuid:
-            raise RuntimeError("Trace does not match the dataset")
-        scenario = dataset[trace.info.uuid]
+        if trace.info.specifications_id != specification.uuid:
+            raise RuntimeError("Trace does not match the specifications")
+        try:
+            scenario = specification[trace.info.scenario_id]
+        except KeyError:
+            raise RuntimeError(
+                f"Scenario {trace.info.scenario_id} not found in specifications"
+            )
+        exec_path = ExecutionPath.from_trace(trace)
         checker = ContractChecker()
-        results = await self._verify_single_trace(trace, dataset, checker)
+        group = [
+            _verify_contract(checker, exec_path, contract)
+            for contract in scenario.contracts
+        ]
+        results = await asyncio.gather(*group)
+        results = {uuid: res for uuid, res in results}
         if output:
             with open(output, "w") as f:
                 json.dump(
                     {
-                        "trace_id": trace_id,
-                        "dataset_id": dataset.uuid if dataset else None,
+                        "trace_id": trace.trace_id,
+                        "specification_id": (
+                            specification.uuid if specification else None
+                        ),
                         "contracts": {
-                            contract.uuid: {
-                                "status": results[contract.uuid][0].name,
+                            contract_id: {
+                                "status": res.satisfied.name,
                                 "requirements": {
                                     rid: r.model_dump(
                                         exclude_unset=True, exclude_none=True
                                     )
-                                    for rid, r in results[contract.uuid][1].items()
+                                    for rid, r in res.info.items()
                                 },
                             }
-                            for contract in scenario.contracts
+                            for contract_id, res in results.items()
                         },
                     },
                     f,
+                    indent=2,
                 )
         for contract in scenario.contracts:
-            cstatus, cresults = results[contract.uuid]
-            contract_table = Table(title=f"{contract.name} ({cstatus.name})")
-            contract_table.add_column(
-                "Type", justify="left", style="cyan", no_wrap=True
-            )
-            contract_table.add_column(
-                "Qualifier", justify="left", style="cyan", no_wrap=True
-            )
-            contract_table.add_column(
-                "Requirement", justify="left", style="cyan", no_wrap=False
-            )
-            contract_table.add_column("Satisfied", justify="left", no_wrap=True)
-            for qreq in contract:
-                contract_table.add_row(
-                    qreq.section.value.upper(),
-                    qreq.qualifier.value.upper(),
-                    qreq.requirement.name,
+            cx = results[contract.uuid]
+            tab = Table(title=f"{contract.name} ({cx.satisfied.name})")
+            tab.add_column("ID", justify="left", style="cyan", no_wrap=True)
+            tab.add_column("Type", justify="left", style="cyan", no_wrap=True)
+            tab.add_column("Qualifier", justify="left", style="cyan", no_wrap=True)
+            tab.add_column("Requirement", justify="left", style="cyan", no_wrap=False)
+            tab.add_column("Satisfied", justify="left", no_wrap=True)
+            for req in contract:
+                tab.add_row(
+                    req.uuid,
+                    req.type.replace("condition", "").upper(),
+                    req.level.name.upper(),
+                    req.name,
                     (
                         "[green]Yes[/green]"
-                        if cresults[qreq.requirement.uuid].satisfied
+                        if cx.info[req.uuid].satisfied
                         else "[red]No[/red]"
                     ),
                 )
-            self.console.print(contract_table)
+            self.console.print(tab)
 
     async def verify_run(
         self,
         run_id: str,
-        dataset_path: Path,
+        specifications_path: Path,
         start: datetime,
         end: datetime,
         output: Optional[Path] = None,
     ):
-        """Verify a run with the given DATASET_PATH."""
-
-        async def _verify_trace(trace_id: str, dataset: Dataset, cc: ContractChecker):
+        """Verify a run with the given SPECIFICATIONS_PATH."""
+        async def _verify_trace(trace_id: str, specs: Specifications):
             trace = await self.client.trace(trace_id)
-            return trace.trace_id, await self._verify_single_trace(trace, dataset, cc)
-
-        dataset = Dataset.load(dataset_path)
+            exec_path = ExecutionPath.from_trace(trace)
+            cc = ContractChecker()
+            scenario = specs[trace.info.scenario_id]
+            group = [
+                _verify_contract(cc, exec_path, contract)
+                for contract in scenario.contracts
+            ]
+            results = await asyncio.gather(*group)
+            results = {uuid: res for uuid, res in results}
+            return trace.trace_id, results
+        
+        try:
+            specification = Specifications.load(specifications_path)
+        except Exception:
+            click.echo(f"Error loading specifications from {specifications_path}")
+            raise click.Abort()
         traces = await self.client.search(start, end, run_id=run_id)
         traces_by_id = {trace.trace_id: trace for trace in traces}
         if not traces_by_id:
             click.echo(f"No traces found for run {run_id}, done.")
             return
-        if not all(trace.dataset_id == dataset.uuid for trace in traces):
+        if not all(trace.specifications_id == specification.uuid for trace in traces):
             click.echo(
-                "Warning: Traces does not match the dataset, trying to verify anyway..."
+                "Warning: Traces does not match the specifications, trying to verify anyway..."
             )
         missing_scenarios = []
         for trace in traces:
-            if trace.scenario_id not in dataset:
+            if trace.scenario_id not in specification:
                 missing_scenarios.append(trace.scenario_id)
         if missing_scenarios:
-            click.Abort(
-                f"Scenarios {missing_scenarios} not found in dataset, aborting..."
+            click.echo(
+                f"Scenarios {missing_scenarios} not found in specifications, aborting..."
             )
-        cc = ContractChecker()
-        group = [_verify_trace(trace.trace_id, dataset, cc) for trace in traces]
+            raise click.Abort()
+
+        
+        group = [_verify_trace(trace.trace_id, specification) for trace in traces]
         results = await asyncio.gather(*group)
         results = {uuid: res for uuid, res in results}
         if output:
@@ -176,18 +217,19 @@ class CLIAdapter:
                 rex = [
                     {
                         "trace_id": trace_id,
-                        "dataset_id": dataset.uuid if dataset else None,
+                        "specifications_id": specification.uuid, 
+                        "scenario_id": traces_by_id[trace_id].scenario_id,
                         "contracts": {
                             contract_id: {
-                                "status": contract_inner_results[0].name,
-                                "requirements": {
+                                "status": cx.satisfied.name,
+                                "info": {
                                     rid: r.model_dump(
                                         exclude_unset=True, exclude_none=True
                                     )
-                                    for rid, r in contract_inner_results[1].items()
+                                    for rid, r in cx.info.items()
                                 },
                             }
-                            for contract_id, contract_inner_results in contract_results.items()
+                            for contract_id, cx in contract_results.items()
                         },
                     }
                     for trace_id, contract_results in results.items()
@@ -195,11 +237,10 @@ class CLIAdapter:
                 json.dump(rex, f)
         for trace_id, contract_results in results.items():
             self.console.print(Rule(f"Trace {trace_id}"))
-            scenario = dataset[traces_by_id[trace_id].scenario_id]
-            for contract_id, contract_inner_results in contract_results.items():
-                cstatus, cresults = contract_inner_results
+            scenario = specification[traces_by_id[trace_id].scenario_id]
+            for contract_id, cx in contract_results.items():
                 contract = scenario.get_contract(contract_id)
-                contract_table = Table(title=f"{contract.name} ({cstatus.name})")
+                contract_table = Table(title=f"{contract.name} ({cx.satisfied.name})")
                 contract_table.add_column(
                     "Type", justify="left", style="cyan", no_wrap=True
                 )
@@ -212,37 +253,32 @@ class CLIAdapter:
                 contract_table.add_column("Satisfied", justify="left", no_wrap=True)
                 for qreq in contract:
                     contract_table.add_row(
-                        qreq.section.value.upper(),
-                        qreq.qualifier.value.upper(),
-                        qreq.requirement.name,
+                        qreq.type.replace("condition","").upper(),
+                        qreq.level.name.upper(),
+                        qreq.name,
                         (
                             "[green]Yes[/green]"
-                            if cresults[qreq.requirement.uuid].satisfied
+                            if cx.info[qreq.uuid].satisfied
                             else "[red]No[/red]"
                         ),
                     )
                 self.console.print(contract_table)
         return results
 
-    async def list_trace(self, start: datetime, end: datetime, timespan: str):
-        """List traces between START and END dates or based on a timespan."""
-        if timespan:
-            # Handle timespan logic here
-            click.echo(f"Listing traces for timespan: {timespan}")
-            if timespan.endswith("h"):
-                start = datetime.now(timezone.utc) - timedelta(hours=int(timespan[:-1]))
-                end = datetime.now(timezone.utc)
-            elif timespan.endswith("d"):
-                start = datetime.now(timezone.utc) - timedelta(days=int(timespan[:-1]))
-                end = datetime.now(timezone.utc)
+    async def list_trace(self, start: datetime, end: datetime):
+        """List traces between START and END dates."""
         traces = await self.client.search(start, end)
+        if traces == {"resourceSpans": []}:
+            click.echo("No traces found")
+            return
         console = Console()
         table = Table()
-        # Add columns to the table
         table.add_column("Trace ID", justify="left", style="cyan", no_wrap=False)
         table.add_column("Project Name", justify="left", style="cyan", no_wrap=False)
         table.add_column("Run ID", justify="left", style="cyan", no_wrap=False)
-        table.add_column("Dataset ID", justify="left", style="cyan", no_wrap=False)
+        table.add_column(
+            "Specifications ID", justify="left", style="cyan", no_wrap=False
+        )
         table.add_column("Scenario ID", justify="left", style="cyan", no_wrap=False)
         table.add_column("Start Time", justify="left", style="cyan", no_wrap=False)
         table.add_column("End Time", justify="left", style="cyan", no_wrap=False)
@@ -251,7 +287,7 @@ class CLIAdapter:
                 trace.trace_id,
                 trace.project_name,
                 trace.run_id,
-                trace.dataset_id,
+                trace.specifications_id,
                 trace.scenario_id,
                 trace.start_time.strftime("%Y-%m-%d %H:%M:%S"),
                 trace.end_time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -259,29 +295,26 @@ class CLIAdapter:
         # Print the table to the console
         console.print(table)
 
-    async def list_run(self, start, end, timespan):
+    async def list_run(self, start, end):
         """List runs between START and END dates."""
-        if timespan:
-            if timespan.endswith("h"):
-                start = datetime.now(timezone.utc) - timedelta(hours=int(timespan[:-1]))
-                end = datetime.now(timezone.utc)
-            elif timespan.endswith("d"):
-                start = datetime.now(timezone.utc) - timedelta(days=int(timespan[:-1]))
-                end = datetime.now(timezone.utc)
-        click.echo(f"Listing runs from {start} to {end}")
         runs = await self.client.run_ids(start, end)
+        if not runs:
+            click.echo("No runs found")
+            return
         console = Console()
         table = Table()
         table.add_column("Run ID", justify="left", style="cyan", no_wrap=True)
         table.add_column("Project Name", justify="left", style="cyan", no_wrap=True)
-        table.add_column("Dataset ID", justify="left", style="cyan", no_wrap=True)
+        table.add_column(
+            "Specifications ID", justify="left", style="cyan", no_wrap=True
+        )
         table.add_column("Start Time", justify="left", style="cyan", no_wrap=True)
         table.add_column("End Time", justify="left", style="cyan", no_wrap=True)
         for run in runs:
             table.add_row(
                 run.run_id,
                 run.project_name,
-                run.dataset_id,
+                run.specifications_id,
                 run.start_time.strftime("%Y-%m-%d %H:%M:%S"),
                 run.end_time.strftime("%Y-%m-%d %H:%M:%S"),
             )
