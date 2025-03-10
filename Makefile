@@ -4,7 +4,8 @@ docker:
 	@docker compose -f docker-compose.yaml up
 
 docker-runtime-certification:
-	@docker compose -f docker-compose.yaml -f docker-compose.certification.yaml --profile runtime-certification up
+	@docker compose -f docker-compose.yaml -f docker-compose.certification.yaml --profile runtime-certification up -d && \
+	make runtime-certification-workers
 
 runtime-certification-workers:
 	@export RUNTIME_VERIFICATION_CONFIG="configs/runtime-verification.yaml" && \
