@@ -1,5 +1,7 @@
 # Agent Contracts
 
+![](https://mintlify.s3.us-west-1.amazonaws.com/relari-4243c669/images/verification.svg)
+
 Agent Contracts provide a structured framework for defining, verifying, and certifying the behavior of AI systems. Unlike traditional software, AI-driven systems—especially those powered by large language models (LLMs) and autonomous agents—exhibit probabilistic and emergent behavior, making their correctness hard to define and enforce. Agent Contracts solve this challenge by specifying expected behaviors, constraints, and verification mechanisms in a formal, testable manner.
 
 **Table of Contents**
