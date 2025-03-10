@@ -201,7 +201,3 @@ Now that you've created your first contract:
 4. Understand how to [evaluate]([/evaluate/evaluation](https://agent-contracts.relari.ai/verification/verification)) your agents
 5. Read more about [runtime certification]([/enforce/runtime](https://agent-contracts.relari.ai/verification/verification))
 6. Look at the [examples](https://agent-contracts.relari.ai/examples/finance-agent) in the docs
-
-🖖 Community
-If you have a feature request or a bug report, feel free to open an issue in Github. We regularly check these and you can expect a quick response. If you'd like to discuss a topic, or get more general advice on how to make Haystack work for your project, you can start a thread in Github Discussions or our Discord channel. We also check 𝕏 (Twitter) and Stack Overflow.
-
