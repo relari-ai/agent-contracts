@@ -1,5 +1,5 @@
 debug: false
-specifications: ".local/fin-agent-runtime-022725.json"
+specifications: "specs.json"
 kafka:
   broker: "localhost:9094"
 rabbitmq:

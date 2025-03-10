@@ -61,6 +61,12 @@ class Settings(BaseModel):
     ttl: int = 60 * 10  # 10 minutes
     key: str = "certificates"
 
+    def model_post_init(self, __context):
+        override_specs = getenv("RUNTIME_VERIFICATION_SPECS", None)
+        if override_specs:
+            logger.info(f"Overriding specifications with {override_specs}")
+            self.specifications = override_specs
+
     @classmethod
     def from_yaml(cls, file_path: str) -> "Settings":
         logger.info(f"Loading runtime verification config from {file_path}")
