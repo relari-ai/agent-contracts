@@ -6,17 +6,6 @@ from loguru import logger
 from pydantic import BaseModel
 
 
-class RabbitMQSettings(BaseModel):
-    host: str = "localhost"
-    port: int = 5672
-    username: str
-    password: str
-
-    @property
-    def url(self):
-        return f"amqp://{self.username}:{self.password}@{self.host}:{self.port}"
-
-
 class RedisSettings(BaseModel):
     host: str = "localhost"
     port: int = 6379
@@ -56,7 +45,6 @@ class Settings(BaseModel):
     debug: bool = False
     specifications: str
     kafka: KafkaSettings
-    # rabbitmq: RabbitMQSettings
     redis: RedisSettings
     ttl: int = 60 * 10  # 10 minutes
     key: str = "certificates"

@@ -1,13 +1,14 @@
-.PHONY: docker docker-runtime-certification runtime-certification-workers
+.PHONY: docker docker-runtime-certification workers-runtime-certification stop
 
-docker:
-	@docker compose -f docker-compose.yaml up
+docker-verification:
+	@docker compose -f docker-compose.yaml up -d
 
 docker-runtime-certification:
 	@docker compose -f docker-compose.yaml -f docker-compose.certification.yaml --profile runtime-certification up -d && \
-	make runtime-certification-workers
+	make workers-runtime-certification
 
-runtime-certification-workers:
-	@export RUNTIME_VERIFICATION_CONFIG="configs/runtime-verification.yaml" && \
+workers-runtime-certification:
 	poetry run dramatiq agent_contracts.certification.workers
 
+stop:
+	@docker compose -f docker-compose.yaml -f docker-compose.certification.yaml --profile runtime-certification stop 

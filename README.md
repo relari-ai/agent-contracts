@@ -150,6 +150,8 @@ To enable the verification server we need to change the docker services running.
 If you started the docker services with you need to stop and use instead
 
 ```bash
+export RUNTIME_VERIFICATION_CONFIG="configs/runtime-certification.yaml" && \
+export RUNTIME_VERIFICATION_SPECS="specs.json" && \
 make docker-runtime-certification
 ```
 
@@ -161,10 +163,11 @@ from relari_otel.otel import Relari
 Relari.init(project_name="Your Project Name", batch=False, certification_enabled=True)
 ```
 
-Now you can run the certification server 
+Now you can run the certification server
 
 ```bash
-export RUNTIME_VERIFICATION_CONFIG="configs/runtime-verification.yaml" && \
+export RUNTIME_VERIFICATION_CONFIG="configs/runtime-certification.yaml" && \
+export RUNTIME_VERIFICATION_SPECS="specs.json" && \
 poetry run python3 agent_contracts/certification/runtime_verification.py 
 ```
 
