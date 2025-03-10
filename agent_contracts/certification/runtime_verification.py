@@ -11,6 +11,7 @@ from agent_contracts.core.datatypes.trace.semcov import (
     RELARI_TRACER,
     ResourceAttributes,
 )
+from agent_contracts.core.utils.telemetry import telemetry_event
 from agent_contracts.core.utils.trace_attributes import get_attribute_value
 
 
@@ -30,7 +31,8 @@ def preprocess(span_data: dict):
     return spans_by_trace_id
 
 
-def main():
+@telemetry_event(name="start_certification_server")
+def start_certification_server():
     consumer = Consumer(RuntimeVerificationConfig.kafka.to_confluent_config())
     consumer.subscribe([RuntimeVerificationConfig.kafka.topic])
     try:
@@ -62,6 +64,10 @@ def main():
         logger.info("Quitting...")
     finally:
         consumer.close()
+
+
+def main():
+    start_certification_server()
 
 
 if __name__ == "__main__":

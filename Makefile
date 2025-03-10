@@ -1,4 +1,4 @@
-.PHONY: docker docker-runtime-certification workers-runtime-certification stop
+.PHONY: docker-verification docker-runtime-certification workers-runtime-certification stop
 
 docker-verification:
 	@docker compose -f docker-compose.yaml up -d

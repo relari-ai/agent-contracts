@@ -7,6 +7,7 @@ from tqdm.asyncio import tqdm
 from agent_contracts.core.datatypes.specifications.contract import Contract
 from agent_contracts.core.datatypes.specifications.requirement import Level, Requirement
 from agent_contracts.core.datatypes.verification.exec_path import ExecutionPath
+from agent_contracts.core.utils.telemetry import telemetry_event
 from agent_contracts.core.verification.base import VerificationResults
 
 
@@ -77,6 +78,7 @@ class ContractChecker:
                 return ContractStatus.UNSATISFIED
         return ContractStatus.SATISFIED
 
+    @telemetry_event(name="check_contract")
     async def check(
         self,
         trace: ExecutionPath,

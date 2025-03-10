@@ -12,6 +12,7 @@ Agent Contracts provide a structured framework for defining, verifying, and cert
     - [Define your contracts](#define-your-contracts)
     - [Offline Verification](#offline-verification)
     - [Runtime Certification](#runtime-certification)
+    - [Anonymous Telemetry](#anonymous-telemetry)
   - [Next Steps](#next-steps)
 
 ## Key Components of an Agent Contract
@@ -29,7 +30,8 @@ Each Agent Contract consists of three essential components:
 - Certifiable AI: Attach verifiable guarantees to AI system decisions for compliance and auditability
 - Scalability: Define flexible constraints that generalize across various scenarios and system updates.
 
-> For more information about agent contracts read the [whitepaper](https://cdn.prod.website-files.com/669f7329c898141d69e16698/67c8ecfc0d3cf63f6331f437_main.pdf) or the [docs](https://agent-contracts.relari.ai/introduction).
+> [!TIP]
+>👉 For more information about agent contracts read the **[whitepaper](https://cdn.prod.website-files.com/669f7329c898141d69e16698/67c8ecfc0d3cf63f6331f437_main.pdf) or the [docs](https://agent-contracts.relari.ai/introduction)**.
 
 ## How to use
 
@@ -129,7 +131,7 @@ poetry run cli ls trace --timespan 1h
 you should see something like
 
 ```text
-$poetry run cli ls run —timespan 1d
+$poetry run cli ls run —timespan 1h
 Listing runs from 2025-03-05 21:54:40 to 2025-03-07 21:54:40…
 ┏━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━┓
 ┃ Run ID   ┃ Project Name        ┃ Specifications ID ┃ Start Time          ┃ End Time            ┃
@@ -181,6 +183,14 @@ async def main():
     print(f"Cert: {cert}")
 ```
 
+### Anonymous Telemetry
+
+Agent-contracts collects **anonymous** usage statistics.
+We receive an event every time a contracts is checked or when the runtime certification is initialized.
+This way, we know which components are most relevant to our community.
+
+To opt out of anonymous telemetry set the environment variable `AGENT_CONTRACTS_DO_NOT_TRACK=true`.
+
 ## Next Steps
 
 Now that you've created your first contract:
@@ -191,3 +201,7 @@ Now that you've created your first contract:
 4. Understand how to [evaluate]([/evaluate/evaluation](https://agent-contracts.relari.ai/verification/verification)) your agents
 5. Read more about [runtime certification]([/enforce/runtime](https://agent-contracts.relari.ai/verification/verification))
 6. Look at the [examples](https://agent-contracts.relari.ai/examples/finance-agent) in the docs
+
+🖖 Community
+If you have a feature request or a bug report, feel free to open an issue in Github. We regularly check these and you can expect a quick response. If you'd like to discuss a topic, or get more general advice on how to make Haystack work for your project, you can start a thread in Github Discussions or our Discord channel. We also check 𝕏 (Twitter) and Stack Overflow.
+

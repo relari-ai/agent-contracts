@@ -28,6 +28,8 @@ jaeger-client = "^4.8.0"
 opentelemetry-proto = "^1.30.0"
 pyyaml = "^6.0.2"
 dramatiq = {extras = ["redis", "watch"], version = "^1.17.1"}
+posthog = "^3.19.1"
+appdirs = "^1.4.4"
 
 
 [tool.poetry.group.dev.dependencies]
