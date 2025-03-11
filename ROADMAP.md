@@ -28,11 +28,12 @@ If you depend on a specific item, we encourage you to open an issue to get updat
 | Theme         | Description                                                                         | Timeline |
 | ------------- | ----------------------------------------------------------------------------------- | -------- |
 | Core          | Javascript/Typescript SDK                                                           | Q1 2025  |
-| Testbot       | Version 1: question replay                                                          | Q1 2025  |
-| Testbot       | Version 2: user simulation                                                          | Q2 2025  |
-| Certification | Performance improvements (incremental updates, trace memory etc)                    | Q1 2025  |
-| Integration   | Include CrewAI, AutoGen etc.                                                        | Q2 2025  |
+| Core          | Support for other model providers                                                   | Q1 2025  |
 | Core          | Add support for multile runs of the same scenario and aggregate results             | Q1 2025  |
 | Core          | Trace error support (if the agent fails, report the error and not run verification) | Q1 2025  |
+| Testbot       | Version 1: question replay                                                          | Q1 2025  |
+| Certification | Performance improvements (incremental updates, trace memory etc)                    | Q1 2025  |
+| Integration   | Include CrewAI, AutoGen etc.                                                        | Q2 2025  |
+| Testbot       | Version 2: user simulation                                                          | Q2 2025  |
 | Core          | Metric support                                                                      | TBD      |
 | Core          | Agent selector                                                                      | TBD      |
