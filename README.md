@@ -198,7 +198,7 @@ To opt out of anonymous telemetry set the environment variable `AGENT_CONTRACTS_
 Now that you've created your first contract:
 
 1. Star the repo! ⭐
-2. If you have not read already, have a look to the [whitepaper](https://cdn.prod.website-files.com/669f7329c898141d69e16698/67cf788d56ca9dcf0b88e8d0_Agent%20Contracts%20Whitepaper.pdf)
+2. If you have not read already, have a look to the [whitepaper](https://cdn.prod.website-files.com/669f7329c898141d69e16698/67cf788d56ca9dcf0b88e8d0_1859d1de14107778dccb73c5291f1d5d_Agent%20Contracts%20Whitepaper.pdf)
 3. Deep dive on how to [defining contracts](https://agent-contracts.relari.ai/contracts/contracts)
 4. Understand how to [verify](https://agent-contracts.relari.ai/verification/verification) your agents
 5. Read more about [runtime certification](https://agent-contracts.relari.ai/certification/certification)
