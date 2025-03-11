@@ -27,13 +27,13 @@ Each Agent Contract consists of three essential components:
 
 ## Why Use Agent Contracts?
 
-- Formal Verification: Ensure AI agents adhere to expected behaviors, reducing unpredictability.
+- Formal Verification: Ensure AI agents adhere to expected behaviors, reducing unpredictability
 - Automated Testing & Monitoring: Enable systematic validation of AI-generated outputs
-- Certifiable AI: Attach verifiable guarantees to AI system decisions for compliance and auditability
-- Scalability: Define flexible constraints that generalize across various scenarios and system updates.
+- Certifiable AI: Attach verifiable guarantees to AI system decisions for compliance in runtime
+- Scalability: Define flexible constraints that generalize across various scenarios and system updates
 
 > [!TIP]
->👉 For more information about agent contracts read the **[whitepaper](https://cdn.prod.website-files.com/669f7329c898141d69e16698/67c8ecfc0d3cf63f6331f437_main.pdf) or the [docs](https://agent-contracts.relari.ai/introduction)**.
+>👉 For more information about agent contracts read the **[whitepaper](https://cdn.prod.website-files.com/669f7329c898141d69e16698/67cf788d56ca9dcf0b88e8d0_1859d1de14107778dccb73c5291f1d5d_Agent%20Contracts%20Whitepaper.pdf) or the [docs](https://agent-contracts.relari.ai/introduction)**.
 
 ## How to use
 
@@ -45,7 +45,6 @@ In a folder of your choice cline this repo
 git clone https://github.com/relari-ai/agent-contracts.git
 cd agent-contracts
 poetry install
-make docker
 ```
 
 In your agent application, install the `relari-otel` package to collect traces
@@ -88,31 +87,34 @@ refund_contract = Contract(
         Precondition("Customer provides damage description"),
         Pathcondition("Document damage with photos"),
         Pathcondition("Get department manager approval"),
-        Postcondition(
-            "Send return shipping label",
-            if_="customer chose mail-in return",
-            on="output",
-        ),
+        Postcondition("Send return shipping label", on="output"),
         Postcondition("Provide estimated refund processing time", on="conversation"),
     ],
 )
 
 ## Define the scenario (collection of contracts)
 simple_scenario = Scenario(
-    name="Financial Analysis Request",
+    name="Customer Refund Request",
     data={
-        "question": "Compare Tesla's gross margin with its top competitors over the last 3 years"
+        "initial_message": "Can I return the sweater I bought last week?",
+        ... # other input data to the agentic system in test
     },
-    contracts=[financial_analysis_contract],
+    contracts=[refund_contract],
 )
 
 ## Define the specifications (collection of scenarios)
-spec = Specifications(scenarios=[simple_scenario])
+specs = Specifications(scenarios=[simple_scenario])
 # .. and save them to file (json or yaml supported)
-spec.save("specs.json")
+specs.save("specs.json")
 ```
 
 ### Offline Verification
+
+In the agent contracts repo, start the verification server
+
+```bash
+make docker-verification
+```
 
 Run your application through all predefined scenarios
 
@@ -150,8 +152,8 @@ poetry run cli verify run cd26ad7e specs.json --timespan 1h
 
 ### Runtime Certification
 
-To enable the verification server we need to change the docker services running.
-If you started the docker services with you need to stop and use instead
+To enable the certification server, we need to change the docker services
+If you started the docker services for verification with you need to stop and use instead
 
 ```bash
 export RUNTIME_VERIFICATION_CONFIG="configs/runtime-certification.yaml" && \
