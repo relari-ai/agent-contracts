@@ -37,6 +37,9 @@ Each Agent Contract consists of three essential components:
 
 ## How to use
 
+> [!NOTE]
+> Javascript/Typescript SDK coming soon!
+
 ### Installation
 
 In a folder of your choice cline this repo
